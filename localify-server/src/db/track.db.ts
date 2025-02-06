@@ -204,21 +204,27 @@ export function getReactedTracks(
   type: "like" | "dislike",
   limit: number = 100,
   offset: number = 0
-): { tracks: Track[]; total: number } {
+): {
+  tracks: (Track & {
+    reaction: "like" | "dislike" | null;
+    reactionDate: number;
+  })[];
+  total: number;
+} {
   const tracks = db
     .prepare(
       `
-      SELECT t.*, r.createdAt as reactionDate, r.type as reactionType
+      SELECT t.*, r.type as reaction, r.createdAt as reactionDate
       FROM tracks t
-      JOIN reactions r ON r.trackId = t.id
+      INNER JOIN reactions r ON r.trackId = t.id
       WHERE r.userId = ? AND r.type = ?
       ORDER BY r.createdAt DESC
       LIMIT ? OFFSET ?
     `
     )
     .all(userId, type, limit, offset) as (Track & {
+    reaction: "like" | "dislike" | null;
     reactionDate: number;
-    reactionType: "like" | "dislike";
   })[];
 
   const total = db
@@ -235,4 +241,113 @@ export function getReactedTracks(
     tracks,
     total: total.count,
   };
+}
+
+export function getAllTracksWithReactions(
+  db: Database,
+  userId: number | null
+): (Track & { reaction: "like" | "dislike" | null })[] {
+  if (!userId) {
+    const tracks = getAllTracks(db);
+    return tracks.map((track) => ({ ...track, reaction: null }));
+  }
+
+  return db
+    .prepare(
+      `
+    SELECT t.*, r.type as reaction
+    FROM tracks t
+    LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+  `
+    )
+    .all(userId) as (Track & { reaction: "like" | "dislike" | null })[];
+}
+
+export function getTrackByIdWithReaction(
+  db: Database,
+  id: number,
+  userId: number | null
+): (Track & { reaction: "like" | "dislike" | null }) | undefined {
+  if (!userId) {
+    const track = getTrackById(db, id);
+    return track ? { ...track, reaction: null } : undefined;
+  }
+
+  return db
+    .prepare(
+      `
+    SELECT t.*, r.type as reaction
+    FROM tracks t
+    LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+    WHERE t.id = ?
+  `
+    )
+    .get(userId, id) as
+    | (Track & { reaction: "like" | "dislike" | null })
+    | undefined;
+}
+
+export function searchTracksWithReactions(
+  db: Database,
+  query: string,
+  userId: number | null
+): (Track & { reaction: "like" | "dislike" | null })[] {
+  if (!userId) {
+    const tracks = searchTracks(db, query);
+    return tracks.map((track) => ({ ...track, reaction: null }));
+  }
+
+  const searchTerm = `%${query}%`;
+  return db
+    .prepare(
+      `
+    SELECT t.*, r.type as reaction
+    FROM tracks t
+    LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+    WHERE title LIKE ? OR artist LIKE ? OR filename LIKE ?
+  `
+    )
+    .all(userId, searchTerm, searchTerm, searchTerm) as (Track & {
+    reaction: "like" | "dislike" | null;
+  })[];
+}
+
+export function getTracksByAlbumIdWithReactions(
+  db: Database,
+  albumId: number,
+  userId: number | null
+): (Track & { reaction: "like" | "dislike" | null })[] {
+  if (!userId) {
+    const tracks = getTracksByAlbumId(db, albumId);
+    return tracks.map((track) => ({ ...track, reaction: null }));
+  }
+
+  return db
+    .prepare(
+      `
+    SELECT t.*, r.type as reaction
+    FROM tracks t
+    LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+    WHERE t.albumId = ?
+    ORDER BY t.id ASC
+  `
+    )
+    .all(userId, albumId) as (Track & {
+    reaction: "like" | "dislike" | null;
+  })[];
+}
+
+export function getAllAlbumsWithTracks(
+  db: Database,
+  userId: number | null
+): (Album & { tracks: (Track & { reaction: "like" | "dislike" | null })[] })[] {
+  const albums = getAllAlbums(db);
+
+  return albums.map((album) => {
+    const tracks = getTracksByAlbumIdWithReactions(db, album.id!, userId);
+    return {
+      ...album,
+      tracks,
+    };
+  });
 }

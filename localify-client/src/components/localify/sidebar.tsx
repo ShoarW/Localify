@@ -61,10 +61,13 @@ export const Sidebar = () => {
             <PlusCircle size={20} />
             <span className="font-medium">Create Playlist</span>
           </button>
-          <button className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-white/15 to-white/5 backdrop-blur-xl border border-white/10 flex items-center gap-2">
+          <Link
+            to="/liked-music"
+            className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-white/15 to-white/5 backdrop-blur-xl border border-white/10 flex items-center gap-2 hover:from-white/20 hover:to-white/10 transition-all duration-300"
+          >
             <Heart size={20} className="text-red-500 fill-red-500" />
             <span className="font-medium text-white">Liked Songs</span>
-          </button>
+          </Link>
         </div>
       </div>
 

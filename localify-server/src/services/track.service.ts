@@ -18,6 +18,11 @@ import {
   setReaction as dbSetReaction,
   getReactedTracks as dbGetReactedTracks,
   getReaction as dbGetReaction,
+  getAllTracksWithReactions as dbGetAllTracksWithReactions,
+  getTrackByIdWithReaction as dbGetTrackByIdWithReaction,
+  searchTracksWithReactions as dbSearchTracksWithReactions,
+  getTracksByAlbumIdWithReactions as dbGetTracksByAlbumIdWithReactions,
+  getAllAlbumsWithTracks as dbGetAllAlbumsWithTracks,
 } from "../db/track.db.js";
 import type { Track, Album } from "../types/model.js";
 import mime from "mime-types";
@@ -256,24 +261,34 @@ export async function addTrack(filePath: string): Promise<void> {
   }
 }
 
-export async function getAllTracks(): Promise<Track[]> {
-  return dbGetAllTracks(db);
+export async function getAllTracks(
+  userId: number | null = null
+): Promise<(Track & { reaction: "like" | "dislike" | null })[]> {
+  return dbGetAllTracksWithReactions(db, userId);
 }
+
 export async function getTrackByPath(
   filePath: string
 ): Promise<Track | undefined> {
   return dbGetTrackByPath(db, filePath);
 }
-export async function getTrackById(id: number): Promise<Track | undefined> {
-  return dbGetTrackById(db, id);
+
+export async function getTrackById(
+  id: number,
+  userId: number | null = null
+): Promise<(Track & { reaction: "like" | "dislike" | null }) | undefined> {
+  return dbGetTrackByIdWithReaction(db, id, userId);
 }
 
 export async function deleteTrack(id: number): Promise<boolean> {
   return dbDeleteTrack(db, id);
 }
 
-export async function searchTracks(query: string): Promise<Track[]> {
-  return dbSearchTracks(db, query);
+export async function searchTracks(
+  query: string,
+  userId: number | null = null
+): Promise<(Track & { reaction: "like" | "dislike" | null })[]> {
+  return dbSearchTracksWithReactions(db, query, userId);
 }
 
 // Album-related functions
@@ -281,17 +296,29 @@ export async function getAlbumById(id: number): Promise<Album | undefined> {
   return dbGetAlbumById(db, id);
 }
 
-export async function getAllAlbums(): Promise<Album[]> {
-  return dbGetAllAlbums(db);
+export async function getAllAlbums(userId: number | null = null): Promise<
+  (Album & {
+    tracks: (Track & { reaction: "like" | "dislike" | null })[];
+  })[]
+> {
+  return dbGetAllAlbumsWithTracks(db, userId);
 }
 
 export async function getAlbumWithTracks(
-  id: number
-): Promise<{ album: Album; tracks: Track[] } | undefined> {
+  id: number,
+  userId: number | null = null
+): Promise<
+  | {
+      album: Album;
+      tracks: (Track & { reaction: "like" | "dislike" | null })[];
+    }
+  | undefined
+> {
   const album = await getAlbumById(id);
   if (!album) return undefined;
 
-  const tracks = await getTracksByAlbumId(id);
+  // Use the function that includes reactions
+  const tracks = dbGetTracksByAlbumIdWithReactions(db, album.id!, userId);
   return { album, tracks };
 }
 

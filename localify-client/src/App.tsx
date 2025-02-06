@@ -15,6 +15,7 @@ import { AlbumPage } from "./components/localify/album-page";
 import { LoginPage } from "./pages/auth/login";
 import { RegisterPage } from "./pages/auth/register";
 import { ProfilePage } from "./pages/profile";
+import { LikedMusicPage } from "./pages/liked-music";
 import { api, Track } from "./services/api";
 
 // Protected Route component
@@ -37,21 +38,6 @@ const AppLayout = () => {
   const [currentPlaylist, setCurrentPlaylist] = useState<Track[]>([]);
   const [currentTrackId, setCurrentTrackId] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-
-  // Fetch tracks when component mounts
-  useEffect(() => {
-    const fetchTracks = async () => {
-      try {
-        const fetchedTracks = await api.getTracks();
-        setAllTracks(fetchedTracks);
-        setCurrentPlaylist(fetchedTracks); // Initially set as the full library
-      } catch (error) {
-        console.error("Failed to fetch tracks:", error);
-      }
-    };
-
-    fetchTracks();
-  }, []);
 
   // Find the current track and its index in the current playlist
   const currentTrackIndex = currentPlaylist.findIndex(
@@ -106,6 +92,16 @@ const AppLayout = () => {
             }
           />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route
+            path="/liked-music"
+            element={
+              <LikedMusicPage
+                currentTrackId={currentTrackId}
+                isPlaying={isPlaying}
+                onPlayTrack={handlePlayTrack}
+              />
+            }
+          />
         </Routes>
       </div>
       <MusicPlayer

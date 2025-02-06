@@ -12,6 +12,7 @@ export const authMiddleware = createMiddleware(async (c, next) => {
   try {
     const payload = await verify(token, config.JWT_SECRET);
     c.set("user", payload);
+    c.set("userId", payload.sub);
     await next();
   } catch (error) {
     return c.json({ error: "Unauthorized: Invalid token" }, 401);

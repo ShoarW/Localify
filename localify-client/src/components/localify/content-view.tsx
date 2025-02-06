@@ -80,6 +80,7 @@ export const ContentView = ({
               duration={Math.floor(track.duration)}
               isActive={currentTrackIndex === index}
               isPlaying={currentTrackIndex === index && isPlaying}
+              reaction={track.reaction}
               onClick={() => onTrackSelect(index)}
             />
           ))}

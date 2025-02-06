@@ -17,7 +17,8 @@ import fs from "fs";
 import mime from "mime-types";
 
 export async function getAllTracksHandler(c: Context) {
-  return c.json(await getAllTracks());
+  const userId = c.get("userId") || null;
+  return c.json(await getAllTracks(userId));
 }
 
 export async function getTrackByIdHandler(c: Context) {
@@ -25,7 +26,9 @@ export async function getTrackByIdHandler(c: Context) {
   if (isNaN(id)) {
     return c.json({ error: "Invalid track ID." }, 400);
   }
-  const track = await getTrackById(id);
+
+  const userId = c.get("userId") || null;
+  const track = await getTrackById(id, userId);
   if (!track) {
     return c.json({ error: "Track not found" }, 404);
   }
@@ -48,7 +51,9 @@ export async function searchTracksHandler(c: Context) {
   if (!query) {
     return c.json({ error: 'Missing search query parameter "q".' }, 400);
   }
-  const tracks = await searchTracks(query);
+
+  const userId = c.get("userId") || null;
+  const tracks = await searchTracks(query, userId);
   return c.json(tracks);
 }
 
@@ -180,7 +185,8 @@ export async function streamTrackHandler(c: Context) {
 }
 
 export async function getAllAlbumsHandler(c: Context) {
-  return c.json(await getAllAlbums());
+  const userId = c.get("userId") || null;
+  return c.json(await getAllAlbums(userId));
 }
 
 export async function getAlbumWithTracksHandler(c: Context) {
@@ -189,10 +195,24 @@ export async function getAlbumWithTracksHandler(c: Context) {
     return c.json({ error: "Invalid album ID." }, 400);
   }
 
-  const albumWithTracks = await getAlbumWithTracks(id);
+  // Get userId from context and log it
+  const userId = c.get("userId") || null;
+  console.log("Getting album tracks with userId:", userId);
+
+  const albumWithTracks = await getAlbumWithTracks(id, userId);
   if (!albumWithTracks) {
     return c.json({ error: "Album not found" }, 404);
   }
+
+  // Log the tracks and their reactions
+  console.log(
+    "Album tracks with reactions:",
+    albumWithTracks.tracks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      reaction: t.reaction,
+    }))
+  );
 
   // If album has a cover image, prepare it for streaming
   if (albumWithTracks.album.coverPath) {

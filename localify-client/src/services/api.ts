@@ -12,6 +12,7 @@ export interface Track {
   mimeType: string;
   createdAt: number;
   updatedAt: number | null;
+  reaction: "like" | "dislike" | null;
 }
 
 export interface Album {
@@ -47,6 +48,15 @@ export interface AuthResponse {
     username: string;
     email: string;
   };
+}
+
+export type ReactionType = "like" | "dislike" | null;
+
+export interface PaginatedTracks {
+  tracks: Track[];
+  total: number;
+  currentPage: number;
+  totalPages: number;
 }
 
 const API_BASE_URL = "http://localhost:3000";
@@ -183,6 +193,65 @@ export const api = {
 
     if (!response.ok) {
       throw new Error("Failed to start indexing");
+    }
+
+    return response.json();
+  },
+
+  // Reaction endpoints
+  setReaction: async (
+    trackId: number,
+    type: ReactionType
+  ): Promise<{ reaction: ReactionType }> => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/tracks/${trackId}/reaction`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ type }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to set reaction");
+    }
+
+    return response.json();
+  },
+
+  getReaction: async (trackId: number): Promise<{ reaction: ReactionType }> => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/tracks/${trackId}/reaction`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to get reaction");
+    }
+
+    return response.json();
+  },
+
+  getReactions: async (
+    type: "like" | "dislike",
+    page: number = 1,
+    pageSize: number = 100
+  ): Promise<PaginatedTracks> => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${API_BASE_URL}/reactions?type=${type}&page=${page}&pageSize=${pageSize}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch reactions");
     }
 
     return response.json();

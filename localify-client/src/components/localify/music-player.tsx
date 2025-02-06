@@ -40,10 +40,12 @@ export const MusicPlayer = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [isDisliked, setIsDisliked] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isChangingTrack, setIsChangingTrack] = useState(false);
+  const [reactionLoading, setReactionLoading] = useState(false);
 
   // Add new state for tracking drag
   const [isDraggingVolume, setIsDraggingVolume] = useState(false);
@@ -53,9 +55,6 @@ export const MusicPlayer = ({
 
   // Add state to track temporary time while dragging
   const [tempTime, setTempTime] = useState(0);
-
-  // Add new state for dislike
-  const [isDisliked, setIsDisliked] = useState(false);
 
   const currentTrack = playlist[currentTrackIndex];
 
@@ -265,6 +264,41 @@ export const MusicPlayer = ({
     };
   }, [isDraggingVolume]);
 
+  // Update reaction states when track changes
+  useEffect(() => {
+    if (!currentTrack) return;
+    setIsLiked(currentTrack.reaction === "like");
+    setIsDisliked(currentTrack.reaction === "dislike");
+  }, [currentTrack]);
+
+  // Add reaction handlers
+  const handleReaction = async (type: "like" | "dislike") => {
+    if (!currentTrack || reactionLoading) return;
+
+    setReactionLoading(true);
+    try {
+      const newType =
+        type === "like"
+          ? isLiked
+            ? null
+            : "like"
+          : isDisliked
+          ? null
+          : "dislike";
+
+      const { reaction } = await api.setReaction(currentTrack.id, newType);
+
+      // Update the reaction in the current track
+      currentTrack.reaction = reaction;
+      setIsLiked(reaction === "like");
+      setIsDisliked(reaction === "dislike");
+    } catch (error) {
+      console.error("Error setting reaction:", error);
+    } finally {
+      setReactionLoading(false);
+    }
+  };
+
   return (
     <div className="h-24 bg-black/30 backdrop-blur-xl border-t border-white/10 flex items-center px-4 relative">
       {/* Track Info Section */}
@@ -307,20 +341,14 @@ export const MusicPlayer = ({
           <ThumbsUp
             className={`w-5 h-5 cursor-pointer transition-all duration-300 hover:scale-110 ${
               isLiked ? "text-green-500 fill-green-500" : "text-white/60"
-            }`}
-            onClick={() => {
-              setIsLiked(!isLiked);
-              if (isDisliked) setIsDisliked(false);
-            }}
+            } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+            onClick={() => handleReaction("like")}
           />
           <ThumbsDown
             className={`w-5 h-5 cursor-pointer transition-all duration-300 hover:scale-110 ${
               isDisliked ? "text-red-500 fill-red-500" : "text-white/60"
-            }`}
-            onClick={() => {
-              setIsDisliked(!isDisliked);
-              if (isLiked) setIsLiked(false);
-            }}
+            } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+            onClick={() => handleReaction("dislike")}
           />
         </div>
       </div>

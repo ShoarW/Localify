@@ -1,5 +1,6 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import type { Context, Next } from "hono";
 
 import { initializeDatabase } from "./db/db.js";
 import dotenv from "dotenv";
@@ -30,6 +31,16 @@ const app = new Hono();
 
 app.use("*", cors());
 
+// Optional auth middleware - will set userId if token is valid, but won't reject if no token
+async function optionalAuthMiddleware(c: Context, next: Next) {
+  try {
+    await authMiddleware(c, next);
+  } catch (e) {
+    // Continue without auth
+    await next();
+  }
+}
+
 // -- Auth -- //
 app.post("/auth/login", loginHandler);
 app.post("/auth/signup", signupHandler);
@@ -52,8 +63,8 @@ app.get("/tracks/:id/reaction", authMiddleware, getReactionHandler);
 app.get("/reactions", authMiddleware, getReactedTracksHandler);
 
 // -- Albums -- //
-app.get("/albums", getAllAlbumsHandler);
-app.get("/albums/:id", getAlbumWithTracksHandler);
+app.get("/albums", optionalAuthMiddleware, getAllAlbumsHandler);
+app.get("/albums/:id", optionalAuthMiddleware, getAlbumWithTracksHandler);
 app.get("/albums/:id/cover", streamAlbumCoverHandler);
 
 // -- Indexing -- //

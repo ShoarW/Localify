@@ -1,4 +1,5 @@
-import { Play, Heart, Pause } from "lucide-react";
+import { Play, Pause, ThumbsUp, ThumbsDown } from "lucide-react";
+import { ReactionType } from "../../services/api";
 
 interface TrackItemProps {
   title: string;
@@ -6,7 +7,7 @@ interface TrackItemProps {
   duration: number;
   isPlaying?: boolean;
   isActive?: boolean;
-  isLiked?: boolean;
+  reaction: ReactionType;
   onClick?: () => void;
 }
 
@@ -16,7 +17,7 @@ export const TrackItem = ({
   duration,
   isPlaying,
   isActive,
-  isLiked = false,
+  reaction,
   onClick,
 }: TrackItemProps) => {
   const formatTime = (seconds: number) => {
@@ -60,13 +61,12 @@ export const TrackItem = ({
           <p className="text-sm text-white/60 truncate">{artist}</p>
         </div>
         <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Heart
-            className={`w-4 h-4 ${
-              isLiked
-                ? "text-red-500 fill-red-500"
-                : "text-white/60 hover:text-white"
-            }`}
-          />
+          {reaction === "like" && (
+            <ThumbsUp className="w-4 h-4 text-green-500 fill-green-500" />
+          )}
+          {reaction === "dislike" && (
+            <ThumbsDown className="w-4 h-4 text-red-500 fill-red-500" />
+          )}
           <span className="text-sm text-white/60 w-12 text-right">
             {formatTime(duration)}
           </span>
