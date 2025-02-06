@@ -1,0 +1,21 @@
+{
+  "name": "localify-server",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.8",
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.7",
+    "hono": "^4.6.20",
+    "mime-types": "^2.1.35",
+    "music-metadata": "^10.8.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/mime-types": "^2.1.4",
+    "@types/node": "^20.11.17",
+    "tsx": "^4.7.1"
+  }
+}
