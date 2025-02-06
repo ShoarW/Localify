@@ -36,6 +36,7 @@ import {
   getAllArtists as dbGetAllArtists,
   createOrUpdateArtist as dbCreateOrUpdateArtist,
   getAlbumWithTracks as dbGetAlbumWithTracks,
+  getShuffledArtistTracks as dbGetShuffledArtistTracks,
 } from "../db/track.db.js";
 import type { Track, Album, Playlist } from "../types/model.js";
 import mime from "mime-types";
@@ -512,4 +513,12 @@ export async function createOrUpdateArtist(artist: {
   imagePath?: string | null;
 }): Promise<number> {
   return dbCreateOrUpdateArtist(db, artist);
+}
+
+export async function getShuffledArtistTracks(
+  artistId: number,
+  userId: number | null = null,
+  limit: number = 50
+): Promise<(Track & { reaction: "like" | "dislike" | null })[]> {
+  return dbGetShuffledArtistTracks(db, artistId, userId, limit);
 }

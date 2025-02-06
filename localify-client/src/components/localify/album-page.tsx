@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { AlbumWithTracks, Track, api } from "../../services/api";
-import { Play } from "lucide-react";
+import { Play, Shuffle } from "lucide-react";
 import { TrackItem } from "./track-item";
 import { Link } from "react-router-dom";
 
@@ -110,6 +110,28 @@ export const AlbumPage = ({
               <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/80 mb-6 break-words">
                 {album.title}
               </h1>
+              <div className="flex items-center gap-4 mb-6">
+                <button
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-medium hover:opacity-90 transition-opacity"
+                  onClick={() => handleTrackClick(0)}
+                >
+                  <Play className="w-4 h-4" fill="white" />
+                  <span>Play</span>
+                </button>
+                <button
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors"
+                  onClick={() => {
+                    // Create a shuffled copy of the tracks array
+                    const shuffledTracks = [...tracks].sort(
+                      () => Math.random() - 0.5
+                    );
+                    onPlayAlbum(shuffledTracks, 0);
+                  }}
+                >
+                  <Shuffle className="w-4 h-4" />
+                  <span>Shuffle</span>
+                </button>
+              </div>
               <div className="flex items-center gap-2 text-white/60 text-sm">
                 <img
                   src={api.getAlbumCoverUrl(album.id)}

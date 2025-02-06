@@ -30,6 +30,7 @@ import {
   getArtistByIdHandler,
   createOrUpdateArtistHandler,
   streamArtistImageHandler,
+  getShuffledArtistTracksHandler,
 } from "./controllers/track.controller.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { permissionMiddleware } from "./middleware/permission.js";
@@ -92,6 +93,11 @@ app.post(
 app.get("/artists", getAllArtistsHandler);
 app.get("/artists/:artistId", optionalAuthMiddleware, getArtistByIdHandler);
 app.get("/artists/:artistId/image", streamArtistImageHandler);
+app.get(
+  "/artists/:artistId/shuffle",
+  optionalAuthMiddleware,
+  getShuffledArtistTracksHandler
+);
 app.post(
   "/artists",
   authMiddleware,

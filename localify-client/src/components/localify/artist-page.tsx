@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ArtistDetails, Track, api } from "../../services/api";
-import { User, Play, Edit, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  User,
+  Play,
+  Edit,
+  ChevronDown,
+  ChevronUp,
+  Shuffle,
+} from "lucide-react";
 import { TrackItem } from "./track-item";
 import { AlbumCard } from "./album-card";
 import { EditArtistModal } from "./edit-artist-modal";
@@ -154,6 +161,24 @@ export const ArtistPage = ({
               <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/80 mb-6 break-words">
                 {artist.name}
               </h1>
+              <div className="flex items-center gap-4 mb-6">
+                <button
+                  onClick={async () => {
+                    try {
+                      const shuffledTracks = await api.shuffleArtist(artist.id);
+                      if (shuffledTracks.length > 0) {
+                        onPlayTrack(shuffledTracks, 0);
+                      }
+                    } catch (error) {
+                      console.error("Failed to shuffle artist tracks:", error);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-medium hover:opacity-90 transition-opacity"
+                >
+                  <Shuffle className="w-4 h-4" />
+                  <span>Shuffle Play</span>
+                </button>
+              </div>
               {artist.description && (
                 <div className="relative">
                   <p
@@ -239,20 +264,42 @@ export const ArtistPage = ({
           <div>
             <h2 className="text-xl font-bold text-white mb-4">Singles</h2>
             <div className="space-y-1">
-              {singles.map((track, index) => (
-                <TrackItem
-                  key={track.id}
-                  number={index + 1}
-                  title={track.title}
-                  artist={artist.name}
-                  duration={track.duration}
-                  isActive={currentTrackId === track.id}
-                  isPlaying={currentTrackId === track.id && isPlaying}
-                  reaction={track.reaction}
-                  trackId={track.id}
-                  onReactionUpdate={handleReactionUpdate}
-                />
-              ))}
+              {singles.map((track, index) => {
+                // Convert single track to full Track type
+                const fullTrack: Track = {
+                  id: track.id,
+                  title: track.title,
+                  artist: artist.name,
+                  artistId: artist.id,
+                  duration: track.duration,
+                  reaction: track.reaction,
+                  // Add required Track properties with placeholder values
+                  path: "",
+                  filename: "",
+                  album: "Single",
+                  albumId: 0,
+                  year: 0,
+                  genre: "",
+                  mimeType: "",
+                  createdAt: 0,
+                  updatedAt: null,
+                };
+                return (
+                  <TrackItem
+                    key={track.id}
+                    number={index + 1}
+                    title={track.title}
+                    artist={artist.name}
+                    duration={track.duration}
+                    isActive={currentTrackId === track.id}
+                    isPlaying={currentTrackId === track.id && isPlaying}
+                    reaction={track.reaction}
+                    trackId={track.id}
+                    onClick={() => handleTrackClick([fullTrack], 0)}
+                    onReactionUpdate={handleReactionUpdate}
+                  />
+                );
+              })}
             </div>
           </div>
         )}

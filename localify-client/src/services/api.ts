@@ -513,4 +513,19 @@ export const api = {
   getArtistImageUrl: (artistId: number): string => {
     return `${API_BASE_URL}/artists/${artistId}/image`;
   },
+
+  // Artist shuffle endpoint
+  shuffleArtist: async (artistId: number, limit?: number): Promise<Track[]> => {
+    const token = localStorage.getItem("token");
+    const url = new URL(`${API_BASE_URL}/artists/${artistId}/shuffle`);
+    if (limit) {
+      url.searchParams.append("limit", limit.toString());
+    }
+
+    const response = await fetch(url.toString(), {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!response.ok) throw new Error("Failed to fetch shuffled tracks");
+    return response.json();
+  },
 };

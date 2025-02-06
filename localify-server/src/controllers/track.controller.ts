@@ -22,6 +22,7 @@ import {
   getArtistById,
   getAllArtists,
   createOrUpdateArtist,
+  getShuffledArtistTracks,
 } from "../services/track.service.js";
 import { config } from "../config.js";
 import fs from "fs";
@@ -761,5 +762,27 @@ export async function streamArtistImageHandler(c: Context) {
   } catch (error) {
     console.error("Error streaming artist image:", error);
     return c.json({ error: "Error streaming artist image" }, 500);
+  }
+}
+
+export async function getShuffledArtistTracksHandler(c: Context) {
+  const artistId = parseInt(c.req.param("artistId"));
+  if (isNaN(artistId)) {
+    return c.json({ error: "Invalid artist ID." }, 400);
+  }
+
+  const limit = parseInt(c.req.query("limit") || "50");
+  if (isNaN(limit) || limit < 1 || limit > 100) {
+    return c.json({ error: "Invalid limit (must be between 1 and 100)" }, 400);
+  }
+
+  const userId = c.get("userId") as number | null;
+
+  try {
+    const tracks = await getShuffledArtistTracks(artistId, userId, limit);
+    return c.json(tracks);
+  } catch (error) {
+    console.error("Error getting shuffled artist tracks:", error);
+    return c.json({ error: "Failed to get shuffled tracks" }, 500);
   }
 }

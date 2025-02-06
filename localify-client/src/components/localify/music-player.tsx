@@ -11,6 +11,9 @@ import {
   Volume2,
   ThumbsUp,
   ThumbsDown,
+  ListMusic,
+  X,
+  Music,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api, Track } from "../../services/api";
@@ -55,6 +58,30 @@ export const MusicPlayer = ({
 
   // Add state to track temporary time while dragging
   const [tempTime, setTempTime] = useState(0);
+
+  const [showQueue, setShowQueue] = useState(false);
+  const queueRef = useRef<HTMLDivElement>(null);
+  const queueButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Handle click outside for queue
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        !queueRef.current?.contains(event.target as Node) &&
+        !queueButtonRef.current?.contains(event.target as Node)
+      ) {
+        setShowQueue(false);
+      }
+    };
+
+    if (showQueue) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showQueue]);
 
   const currentTrack = playlist[currentTrackIndex];
 
@@ -314,16 +341,35 @@ export const MusicPlayer = ({
               }`}
             >
               <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
-              <img
-                src={api.getTrackCoverUrl(currentTrack)}
-                alt={currentTrack.title}
-                className="relative w-14 h-14 rounded-lg shadow-lg transform group-hover:scale-105 transition-transform duration-300"
-              />
-              {isLoading && (
-                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                  <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                </div>
-              )}
+              <div className="relative w-14 h-14 rounded-lg shadow-lg transform group-hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center overflow-hidden">
+                {currentTrack.albumId ? (
+                  <img
+                    src={api.getTrackCoverUrl(currentTrack)}
+                    alt={currentTrack.title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = "none";
+                      target.parentElement?.classList.add(
+                        "flex",
+                        "items-center",
+                        "justify-center"
+                      );
+                      const icon = document.createElement("div");
+                      icon.innerHTML =
+                        '<svg class="w-6 h-6 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
+                      target.parentElement?.appendChild(icon);
+                    }}
+                  />
+                ) : (
+                  <Music className="w-6 h-6 text-white/40" />
+                )}
+                {isLoading && (
+                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
             </Link>
             <div
               className={`min-w-0 transition-opacity duration-300 ${
@@ -344,7 +390,9 @@ export const MusicPlayer = ({
             </div>
           </>
         ) : (
-          <div className="w-14 h-14 rounded-lg bg-white/10" />
+          <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
+            <Music className="w-6 h-6 text-white/40" />
+          </div>
         )}
         <div className="flex items-center gap-2">
           <ThumbsUp
@@ -470,6 +518,16 @@ export const MusicPlayer = ({
       <div className="w-[30%] flex justify-end">
         <div className="flex items-center gap-2">
           <button
+            ref={queueButtonRef}
+            onClick={() => setShowQueue(!showQueue)}
+            className={`p-2 rounded-lg hover:bg-white/10 transition-colors ${
+              showQueue ? "bg-white/10" : ""
+            }`}
+            title="Show queue"
+          >
+            <ListMusic className="w-5 h-5 text-white/60" />
+          </button>
+          <button
             onClick={() => {
               setIsMuted(!isMuted);
               audioRef.current.volume = isMuted ? volume / 100 : 0;
@@ -526,6 +584,75 @@ export const MusicPlayer = ({
           </div>
         </div>
       </div>
+
+      {/* Queue Overlay */}
+      {showQueue && (
+        <>
+          <div
+            ref={queueRef}
+            className="absolute right-2 bottom-full mb-2 w-96 max-h-[70vh] bg-gradient-to-b from-black/90 to-black/80 backdrop-blur-xl rounded-t-xl border border-white/10 overflow-hidden z-50"
+          >
+            <div className="p-4 border-b border-white/10">
+              <h3 className="text-white font-medium">Queue</h3>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(70vh-4rem)]">
+              <div className="p-2 space-y-1">
+                {playlist.map((track, index) => (
+                  <div
+                    key={track.id}
+                    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-white/5 transition-colors ${
+                      index === currentTrackIndex ? "bg-white/10" : ""
+                    }`}
+                    onClick={() => setCurrentTrackIndex(index)}
+                  >
+                    <div className="w-10 h-10 rounded bg-gradient-to-br from-white/10 to-white/5 shrink-0 overflow-hidden flex items-center justify-center">
+                      {track.albumId ? (
+                        <img
+                          src={api.getTrackCoverUrl(track)}
+                          alt={track.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = "none";
+                            target.parentElement?.classList.add(
+                              "flex",
+                              "items-center",
+                              "justify-center"
+                            );
+                            const icon = document.createElement("div");
+                            icon.innerHTML =
+                              '<svg class="w-5 h-5 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
+                            target.parentElement?.appendChild(icon);
+                          }}
+                        />
+                      ) : (
+                        <Music className="w-5 h-5 text-white/40" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm font-medium truncate ${
+                          index === currentTrackIndex
+                            ? "text-red-500"
+                            : "text-white"
+                        }`}
+                      >
+                        {track.title}
+                      </p>
+                      <p className="text-sm text-white/60 truncate">
+                        {track.artist}
+                      </p>
+                    </div>
+                    {index === currentTrackIndex && isPlaying && (
+                      <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Glossy Background */}
       <div className="absolute inset-0 -z-10">

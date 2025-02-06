@@ -95,7 +95,7 @@ export const ContextMenu = ({
             ref={menuRef}
             className={`absolute z-50 ${
               align === "right" ? "right-0" : "left-0"
-            } mt-2 w-56 bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl rounded-xl shadow-2xl border border-white/10 py-1 pointer-events-auto`}
+            } mt-2 w-56 bg-gradient-to-b from-black/90 to-black/80 backdrop-blur-xl rounded-xl shadow-2xl border border-white/10 py-1 pointer-events-auto`}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -105,10 +105,12 @@ export const ContextMenu = ({
               <div key={index} className="relative">
                 <button
                   onClick={(e) => handleItemClick(e, item, index)}
-                  className="w-full px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 flex items-center justify-between group"
+                  className="w-full px-4 py-2 text-sm text-white hover:bg-white/5 flex items-center justify-between group transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    {item.icon}
+                    {item.icon && (
+                      <div className="text-white/60">{item.icon}</div>
+                    )}
                     <span>{item.label}</span>
                   </div>
                   {item.items && (
@@ -125,7 +127,7 @@ export const ContextMenu = ({
                       subMenuPosition === "right"
                         ? "left-full ml-2"
                         : "right-full mr-2"
-                    } w-56 bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl rounded-xl shadow-2xl border border-white/10 py-1 pointer-events-auto`}
+                    } w-56 bg-gradient-to-b from-black/90 to-black/80 backdrop-blur-xl rounded-xl shadow-2xl border border-white/10 py-1 pointer-events-auto`}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -141,9 +143,11 @@ export const ContextMenu = ({
                           setIsOpen(false);
                           setActiveSubMenu(null);
                         }}
-                        className="w-full px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-sm text-white hover:bg-white/5 flex items-center gap-2 transition-colors"
                       >
-                        {subItem.icon}
+                        {subItem.icon && (
+                          <div className="text-white/60">{subItem.icon}</div>
+                        )}
                         <span className="truncate">{subItem.label}</span>
                       </button>
                     ))}

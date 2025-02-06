@@ -898,3 +898,41 @@ export function createOrUpdateArtist(
     return result.lastInsertRowid as number;
   }
 }
+
+export function getShuffledArtistTracks(
+  db: Database,
+  artistId: number,
+  userId: number | null,
+  limit: number = 50
+): (Track & { reaction: "like" | "dislike" | null })[] {
+  if (!userId) {
+    return db
+      .prepare(
+        `
+        SELECT t.*, NULL as reaction
+        FROM tracks t
+        WHERE t.artistId = ?
+        ORDER BY RANDOM()
+        LIMIT ?
+      `
+      )
+      .all(artistId, limit) as (Track & {
+      reaction: "like" | "dislike" | null;
+    })[];
+  }
+
+  return db
+    .prepare(
+      `
+      SELECT t.*, r.type as reaction
+      FROM tracks t
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      WHERE t.artistId = ?
+      ORDER BY RANDOM()
+      LIMIT ?
+    `
+    )
+    .all(userId, artistId, limit) as (Track & {
+    reaction: "like" | "dislike" | null;
+  })[];
+}
