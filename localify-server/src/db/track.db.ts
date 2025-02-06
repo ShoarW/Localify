@@ -104,13 +104,23 @@ export function getAlbumById(
   db: Database,
   id: number
 ):
-  | (Album & { artist: string | null; type: "single" | "ep" | "album" })
+  | (Album & {
+      artist: string | null;
+      type: "single" | "ep" | "album";
+      hasImage: boolean;
+    })
   | undefined {
   const result = db
     .prepare(
       `
       WITH album_tracks AS (
-        SELECT a.*, ar.name as artist, COUNT(t.id) as trackCount
+        SELECT 
+          a.id,
+          a.title,
+          a.artistId,
+          ar.name as artist,
+          CASE WHEN a.coverPath IS NOT NULL THEN 1 ELSE 0 END as hasImage,
+          COUNT(t.id) as trackCount
         FROM albums a
         LEFT JOIN artists ar ON a.artistId = ar.id
         LEFT JOIN tracks t ON t.albumId = a.id
@@ -128,20 +138,32 @@ export function getAlbumById(
     `
     )
     .get(id) as
-    | (Album & { artist: string | null; type: "single" | "ep" | "album" })
+    | (Album & {
+        artist: string | null;
+        type: "single" | "ep" | "album";
+        hasImage: boolean;
+      })
     | undefined;
 
   return result;
 }
 
-export function getAllAlbums(
-  db: Database
-): (Album & { artist: string | null; type: "single" | "ep" | "album" })[] {
+export function getAllAlbums(db: Database): (Album & {
+  artist: string | null;
+  type: "single" | "ep" | "album";
+  hasImage: boolean;
+})[] {
   return db
     .prepare(
       `
       WITH album_tracks AS (
-        SELECT a.*, ar.name as artist, COUNT(t.id) as trackCount
+        SELECT 
+          a.id,
+          a.title,
+          a.artistId,
+          ar.name as artist,
+          CASE WHEN a.coverPath IS NOT NULL THEN 1 ELSE 0 END as hasImage,
+          COUNT(t.id) as trackCount
         FROM albums a
         LEFT JOIN artists ar ON a.artistId = ar.id
         LEFT JOIN tracks t ON t.albumId = a.id
@@ -161,6 +183,7 @@ export function getAllAlbums(
     .all() as (Album & {
     artist: string | null;
     type: "single" | "ep" | "album";
+    hasImage: boolean;
   })[];
 }
 
@@ -354,17 +377,41 @@ export function getAllTracksWithReactions(
   userId: number | null
 ): (Track & { reaction: "like" | "dislike" | null })[] {
   if (!userId) {
-    const tracks = getAllTracks(db);
-    return tracks.map((track) => ({ ...track, reaction: null }));
+    return db
+      .prepare(
+        `
+        SELECT 
+          t.id,
+          t.title,
+          t.genre,
+          t.duration,
+          t.albumId,
+          ar.name as artistName,
+          NULL as reaction
+        FROM tracks t
+        LEFT JOIN artists ar ON t.artistId = ar.id
+        ORDER BY t.id ASC
+      `
+      )
+      .all() as (Track & { reaction: "like" | "dislike" | null })[];
   }
 
   return db
     .prepare(
       `
-    SELECT t.*, r.type as reaction
-    FROM tracks t
-    LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
-  `
+      SELECT 
+        t.id,
+        t.title,
+        t.genre,
+        t.duration,
+        t.albumId,
+        ar.name as artistName,
+        r.type as reaction
+      FROM tracks t
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists ar ON t.artistId = ar.id
+      ORDER BY t.id ASC
+    `
     )
     .all(userId) as (Track & { reaction: "like" | "dislike" | null })[];
 }
@@ -375,18 +422,41 @@ export function getTrackByIdWithReaction(
   userId: number | null
 ): (Track & { reaction: "like" | "dislike" | null }) | undefined {
   if (!userId) {
-    const track = getTrackById(db, id);
-    return track ? { ...track, reaction: null } : undefined;
+    return db
+      .prepare(
+        `
+        SELECT 
+          t.id,
+          t.title,
+          t.genre,
+          t.duration,
+          t.albumId,
+          ar.name as artistName,
+          NULL as reaction
+        FROM tracks t
+        LEFT JOIN artists ar ON t.artistId = ar.id
+        WHERE t.id = ?
+      `
+      )
+      .get(id) as (Track & { reaction: "like" | "dislike" | null }) | undefined;
   }
 
   return db
     .prepare(
       `
-    SELECT t.*, r.type as reaction
-    FROM tracks t
-    LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
-    WHERE t.id = ?
-  `
+      SELECT 
+        t.id,
+        t.title,
+        t.genre,
+        t.duration,
+        t.albumId,
+        ar.name as artistName,
+        r.type as reaction
+      FROM tracks t
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists ar ON t.artistId = ar.id
+      WHERE t.id = ?
+    `
     )
     .get(userId, id) as
     | (Track & { reaction: "like" | "dislike" | null })
@@ -450,7 +520,13 @@ export function getTracksByAlbumIdWithReactions(
     return db
       .prepare(
         `
-        SELECT t.*, NULL as reaction, ar.name as artistName
+        SELECT 
+          t.id,
+          t.title,
+          t.duration,
+          t.genre,
+          NULL as reaction,
+          ar.name as artistName
         FROM tracks t
         LEFT JOIN artists ar ON t.artistId = ar.id
         WHERE t.albumId = ?
@@ -466,7 +542,13 @@ export function getTracksByAlbumIdWithReactions(
   return db
     .prepare(
       `
-      SELECT t.*, r.type as reaction, ar.name as artistName
+      SELECT 
+        t.id,
+        t.title,
+        t.duration,
+        t.genre,
+        r.type as reaction,
+        ar.name as artistName
       FROM tracks t
       LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
       LEFT JOIN artists ar ON t.artistId = ar.id
@@ -672,9 +754,21 @@ export function advancedSearch(
   userId: number | null,
   limit: number = 5
 ): {
-  artists: { id: number; name: string; trackCount: number }[];
-  albums: (Album & { artist: string | null; trackCount: number })[];
-  tracks: (Track & { reaction: "like" | "dislike" | null })[];
+  artists: {
+    id: number;
+    name: string;
+    trackCount: number;
+    hasImage: boolean;
+  }[];
+  albums: (Album & {
+    artist: string | null;
+    trackCount: number;
+    hasImage: boolean;
+  })[];
+  tracks: (Track & {
+    reaction: "like" | "dislike" | null;
+    artistName: string | null;
+  })[];
 } {
   const searchTerm = `%${query}%`;
 
@@ -682,7 +776,11 @@ export function advancedSearch(
   const artists = db
     .prepare(
       `
-      SELECT a.id, a.name, COUNT(t.id) as trackCount
+      SELECT 
+        a.id, 
+        a.name, 
+        COUNT(t.id) as trackCount,
+        CASE WHEN a.imagePath IS NOT NULL THEN 1 ELSE 0 END as hasImage
       FROM artists a
       LEFT JOIN tracks t ON t.artistId = a.id
       WHERE a.name LIKE ?
@@ -695,13 +793,20 @@ export function advancedSearch(
     id: number;
     name: string;
     trackCount: number;
+    hasImage: boolean;
   }[];
 
   // Search for albums with their track counts and artist names
   const albums = db
     .prepare(
       `
-      SELECT a.*, ar.name as artist, COUNT(t.id) as trackCount
+      SELECT 
+        a.id,
+        a.title,
+        a.artistId,
+        CASE WHEN a.coverPath IS NOT NULL THEN 1 ELSE 0 END as hasImage,
+        ar.name as artist, 
+        COUNT(t.id) as trackCount
       FROM albums a
       LEFT JOIN tracks t ON t.albumId = a.id
       LEFT JOIN artists ar ON a.artistId = ar.id
@@ -714,64 +819,72 @@ export function advancedSearch(
     .all(searchTerm, searchTerm, limit) as (Album & {
     artist: string | null;
     trackCount: number;
+    hasImage: boolean;
   })[];
 
-  // Search for tracks with reactions
+  // Search for tracks with reactions and artist names
   const tracks = userId
     ? db
         .prepare(
           `
-          SELECT t.*, r.type as reaction
+          SELECT 
+            t.id,
+            t.title,
+            t.genre,
+            t.duration,
+            t.albumId,
+            r.type as reaction,
+            ar.name as artistName
           FROM tracks t
           LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
-          LEFT JOIN artists a ON t.artistId = a.id
+          LEFT JOIN artists ar ON t.artistId = ar.id
           WHERE t.title LIKE ? 
-             OR a.name LIKE ? 
-             OR t.filename LIKE ?
+             OR ar.name LIKE ? 
           ORDER BY 
             CASE 
               WHEN t.title LIKE ? THEN 1
-              WHEN a.name LIKE ? THEN 2
+              WHEN ar.name LIKE ? THEN 2
               ELSE 3
             END,
             t.title ASC
           LIMIT ?
         `
         )
-        .all(
-          userId,
-          searchTerm,
-          searchTerm,
-          searchTerm,
-          searchTerm,
-          searchTerm,
-          limit
-        )
+        .all(userId, searchTerm, searchTerm, searchTerm, searchTerm, limit)
     : db
         .prepare(
           `
-          SELECT t.*, NULL as reaction
+          SELECT 
+            t.id,
+            t.title,
+            t.genre,
+            t.duration,
+            t.albumId,
+            NULL as reaction,
+            ar.name as artistName
           FROM tracks t
-          LEFT JOIN artists a ON t.artistId = a.id
+          LEFT JOIN artists ar ON t.artistId = ar.id
           WHERE t.title LIKE ? 
-             OR a.name LIKE ? 
-             OR t.filename LIKE ?
+             OR ar.name LIKE ? 
           ORDER BY 
             CASE 
               WHEN t.title LIKE ? THEN 1
-              WHEN a.name LIKE ? THEN 2
+              WHEN ar.name LIKE ? THEN 2
               ELSE 3
             END,
             t.title ASC
           LIMIT ?
         `
         )
-        .all(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, limit);
+        .all(searchTerm, searchTerm, searchTerm, searchTerm, limit);
 
   return {
     artists,
     albums,
-    tracks: tracks as (Track & { reaction: "like" | "dislike" | null })[],
+    tracks: tracks as (Track & {
+      reaction: "like" | "dislike" | null;
+      artistName: string | null;
+    })[],
   };
 }
 
@@ -786,38 +899,50 @@ export function getArtistById(
         id: number;
         name: string;
         description: string | null;
-        imagePath: string | null;
-        createdAt: string;
-        updatedAt: string | null;
+        hasImage: boolean;
       };
       randomTracks: (Track & { reaction: "like" | "dislike" | null })[];
       albums: (Album & {
         trackCount: number;
         type: "single" | "ep" | "album";
+        hasImage: boolean;
       })[];
       singles: (Track & { reaction: "like" | "dislike" | null })[];
     }
   | undefined {
   const artist = db
-    .prepare(`SELECT * FROM artists WHERE id = ?`)
+    .prepare(
+      `
+      SELECT 
+        id,
+        name,
+        description,
+        CASE WHEN imagePath IS NOT NULL THEN 1 ELSE 0 END as hasImage
+      FROM artists 
+      WHERE id = ?
+    `
+    )
     .get(artistId) as
     | {
         id: number;
         name: string;
         description: string | null;
-        imagePath: string | null;
-        createdAt: string;
-        updatedAt: string | null;
+        hasImage: boolean;
       }
     | undefined;
 
   if (!artist) return undefined;
 
-  // Get 5 random tracks
   const randomTracks = db
     .prepare(
       `
-      SELECT t.*, r.type as reaction, ar.name as artistName
+      SELECT 
+        t.id,
+        t.title,
+        t.duration,
+        t.genre,
+        r.type as reaction,
+        ar.name as artistName
       FROM tracks t
       LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
       LEFT JOIN artists ar ON t.artistId = ar.id
@@ -831,38 +956,18 @@ export function getArtistById(
     artistName: string | null;
   })[];
 
-  // Get all albums with track counts and classify them
-  const albums = db
-    .prepare(
-      `
-      WITH album_tracks AS (
-        SELECT a.*, COUNT(t.id) as trackCount
-        FROM albums a
-        LEFT JOIN tracks t ON t.albumId = a.id
-        WHERE a.artistId = ?
-        GROUP BY a.id
-      )
-      SELECT 
-        *,
-        CASE 
-          WHEN trackCount <= 3 THEN 'single'
-          WHEN trackCount <= 6 THEN 'ep'
-          ELSE 'album'
-        END as type
-      FROM album_tracks
-      ORDER BY title ASC
-    `
-    )
-    .all(artistId) as (Album & {
-    trackCount: number;
-    type: "single" | "ep" | "album";
-  })[];
+  const albums = getArtistAlbums(db, artistId);
 
-  // Get singles (tracks without albums)
   const singles = db
     .prepare(
       `
-      SELECT t.*, r.type as reaction, ar.name as artistName
+      SELECT 
+        t.id,
+        t.title,
+        t.duration,
+        t.genre,
+        r.type as reaction,
+        ar.name as artistName
       FROM tracks t
       LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
       LEFT JOIN artists ar ON t.artistId = ar.id
@@ -887,7 +992,7 @@ export function getAllArtists(db: Database): {
   id: number;
   name: string;
   description: string | null;
-  imagePath: string | null;
+  hasImage: boolean;
   trackCount: number;
   albumCount: number;
 }[] {
@@ -895,7 +1000,10 @@ export function getAllArtists(db: Database): {
     .prepare(
       `
       SELECT 
-        a.*,
+        a.id,
+        a.name,
+        a.description,
+        CASE WHEN a.imagePath IS NOT NULL THEN 1 ELSE 0 END as hasImage,
         COUNT(DISTINCT t.id) as trackCount,
         COUNT(DISTINCT al.id) as albumCount
       FROM artists a
@@ -909,7 +1017,7 @@ export function getAllArtists(db: Database): {
     id: number;
     name: string;
     description: string | null;
-    imagePath: string | null;
+    hasImage: boolean;
     trackCount: number;
     albumCount: number;
   }[];
@@ -984,7 +1092,14 @@ export function getShuffledArtistTracks(
     return db
       .prepare(
         `
-        SELECT t.*, NULL as reaction, ar.name as artistName
+        SELECT 
+          t.id,
+          t.title,
+          t.duration,
+          t.genre,
+          t.albumId,
+          NULL as reaction,
+          ar.name as artistName
         FROM tracks t
         LEFT JOIN artists ar ON t.artistId = ar.id
         WHERE t.artistId = ?
@@ -1001,7 +1116,14 @@ export function getShuffledArtistTracks(
   return db
     .prepare(
       `
-      SELECT t.*, r.type as reaction, ar.name as artistName
+      SELECT 
+        t.id,
+        t.title,
+        t.duration,
+        t.genre,
+        t.albumId,
+        r.type as reaction,
+        ar.name as artistName
       FROM tracks t
       LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
       LEFT JOIN artists ar ON t.artistId = ar.id
@@ -1013,5 +1135,46 @@ export function getShuffledArtistTracks(
     .all(userId, artistId, limit) as (Track & {
     reaction: "like" | "dislike" | null;
     artistName: string | null;
+  })[];
+}
+
+// Get all albums with track counts and classify them
+export function getArtistAlbums(
+  db: Database,
+  artistId: number
+): (Album & {
+  trackCount: number;
+  type: "single" | "ep" | "album";
+  hasImage: boolean;
+})[] {
+  return db
+    .prepare(
+      `
+      WITH album_tracks AS (
+        SELECT 
+          a.id,
+          a.title,
+          CASE WHEN a.coverPath IS NOT NULL THEN 1 ELSE 0 END as hasImage,
+          COUNT(t.id) as trackCount
+        FROM albums a
+        LEFT JOIN tracks t ON t.albumId = a.id
+        WHERE a.artistId = ?
+        GROUP BY a.id
+      )
+      SELECT 
+        *,
+        CASE 
+          WHEN trackCount <= 3 THEN 'single'
+          WHEN trackCount <= 6 THEN 'ep'
+          ELSE 'album'
+        END as type
+      FROM album_tracks
+      ORDER BY title ASC
+    `
+    )
+    .all(artistId) as (Album & {
+    trackCount: number;
+    type: "single" | "ep" | "album";
+    hasImage: boolean;
   })[];
 }

@@ -1,20 +1,19 @@
 export interface Track {
   id: number;
-  path: string;
-  filename: string;
   title: string;
   artist: string;
   artistId: number;
   artistName: string;
+  duration: number;
+  reaction: ReactionType;
   album: string;
   albumId: number;
+  hasImage: boolean;
   year: number;
   genre: string;
-  duration: number;
   mimeType: string;
   createdAt: number;
-  updatedAt: number | null;
-  reaction: "like" | "dislike" | null;
+  updatedAt: null;
 }
 
 export interface Album {
@@ -22,10 +21,11 @@ export interface Album {
   title: string;
   artist: string;
   artistId: number;
-  year: number;
-  coverPath: string;
-  createdAt: number;
-  updatedAt: number | null;
+  year: number | null;
+  hasImage: boolean;
+  trackCount: number;
+  createdAt: string;
+  updatedAt: string | null;
 }
 
 export interface AlbumWithTracks {
@@ -79,10 +79,10 @@ export interface PlaylistDetails {
   id: number;
   name: string;
   description: string | null;
-  userId: number;
   ownerName: string;
+  tracks: Track[];
   createdAt: string;
-  tracks: PlaylistTrack[];
+  updatedAt: string | null;
 }
 
 export interface TrackOrder {
@@ -95,24 +95,23 @@ export interface SearchResults {
     id: number;
     name: string;
     trackCount: number;
+    hasImage: number;
   }[];
   albums: {
     id: number;
     title: string;
-    artist: string | null;
-    year: number | null;
-    coverPath: string | null;
+    artistId: number;
+    hasImage: number;
+    artist: string;
     trackCount: number;
-    createdAt: string;
-    updatedAt: string | null;
   }[];
   tracks: {
     id: number;
     title: string;
-    artist: string;
-    albumId: number;
+    genre: string;
     duration: number;
-    reaction: "like" | "dislike" | null;
+    reaction: ReactionType;
+    artistName: string;
   }[];
 }
 
@@ -120,28 +119,16 @@ export interface Artist {
   id: number;
   name: string;
   description: string | null;
-  imagePath: string | null;
-  trackCount: number;
-  albumCount: number;
+  hasImage: boolean;
+  createdAt: string;
+  updatedAt: string | null;
 }
 
 export interface ArtistDetails {
-  artist: {
-    id: number;
-    name: string;
-    description: string | null;
-    imagePath: string | null;
-    createdAt: string;
-    updatedAt: string | null;
-  };
+  artist: Artist;
   randomTracks: Track[];
+  singles: Track[];
   albums: Album[];
-  singles: {
-    id: number;
-    title: string;
-    duration: number;
-    reaction: ReactionType;
-  }[];
 }
 
 const API_BASE_URL = "http://localhost:3000";

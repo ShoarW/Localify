@@ -107,7 +107,7 @@ const AppLayout = () => {
       <div className="relative h-screen bg-black flex flex-col min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black">
         <div
           className="relative flex flex-1 overflow-hidden"
-          style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+          style={{ fontFamily: "'Outfit', sans-serif" }}
         >
           <Sidebar playlists={playlists} />
           <Routes>
@@ -229,7 +229,7 @@ function App() {
   return (
     <Router>
       <link
-        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap"
         rel="stylesheet"
       />
       <Routes>

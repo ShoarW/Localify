@@ -246,13 +246,13 @@ export const SearchModal = ({
                         >
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center overflow-hidden">
-                              {api.getArtistImageUrl(artist.id) ? (
+                              {artist.hasImage ? (
                                 <img
                                   src={`${api.getArtistImageUrl(
                                     artist.id
                                   )}?t=${Date.now()}`}
                                   alt={artist.name}
-                                  className="w-full h-full object-cover"
+                                  className="w-10 h-10 object-cover"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement;
                                     const parent = target.parentElement;
@@ -320,11 +320,11 @@ export const SearchModal = ({
                           className="flex items-center justify-between p-3"
                         >
                           <div className="flex items-center gap-3">
-                            {album.coverPath ? (
+                            {album.hasImage ? (
                               <img
                                 src={api.getAlbumCoverUrl(album.id)}
                                 alt={album.title}
-                                className="w-10 h-10 rounded-lg object-cover"
+                                className="w-10 h-10 object-cover rounded-xl"
                               />
                             ) : (
                               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
@@ -379,7 +379,7 @@ export const SearchModal = ({
                               {track.title}
                             </p>
                             <p className="text-white/60 text-sm">
-                              {track.artist}
+                              {track.artistName} • {track.genre}
                             </p>
                           </div>
                         </div>

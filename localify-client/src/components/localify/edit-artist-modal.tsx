@@ -5,25 +5,26 @@ import { ImageCropper } from "./image-cropper";
 
 interface EditArtistModalProps {
   isOpen: boolean;
+  onClose: () => void;
   artistId: number;
   initialData: {
     name: string;
     description: string | null;
-    imagePath: string | null;
+    hasImage: boolean;
   };
-  onClose: () => void;
   onUpdate: (updatedArtist: {
     name: string;
     description: string | null;
     artistId: number;
+    hasImage: boolean;
   }) => void;
 }
 
 export const EditArtistModal = ({
   isOpen,
+  onClose,
   artistId,
   initialData,
-  onClose,
   onUpdate,
 }: EditArtistModalProps) => {
   const [name, setName] = useState<string>(initialData.name);
@@ -32,10 +33,11 @@ export const EditArtistModal = ({
   );
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(
-    initialData.imagePath
+    initialData.hasImage ? api.getArtistImageUrl(artistId) : null
   );
   const [showCropper, setShowCropper] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) {
@@ -70,30 +72,26 @@ export const EditArtistModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
+
     setIsLoading(true);
+    setError(null);
 
     try {
-      const response = await api.updateArtist(artistId, {
+      await api.updateArtist(artistId, {
         name,
         description: description || null,
         image: selectedImage,
       });
-
-      if (selectedImage) {
-        if (previewUrl && previewUrl.startsWith("blob:")) {
-          URL.revokeObjectURL(previewUrl);
-        }
-        setPreviewUrl(`${api.getArtistImageUrl(artistId)}?t=${Date.now()}`);
-      }
-
       onUpdate({
         name,
         description: description || null,
-        artistId: response.artistId,
+        artistId,
+        hasImage: selectedImage ? true : initialData.hasImage,
       });
       onClose();
     } catch (error) {
-      console.error("Failed to update artist:", error);
+      setError("Failed to update artist");
     } finally {
       setIsLoading(false);
     }
@@ -233,7 +231,9 @@ export const EditArtistModal = ({
           onCropComplete={handleCropComplete}
           onCancel={() => {
             setShowCropper(false);
-            setPreviewUrl(initialData.imagePath);
+            setPreviewUrl(
+              initialData.hasImage ? api.getArtistImageUrl(artistId) : null
+            );
             if (fileInputRef.current) {
               fileInputRef.current.value = "";
             }

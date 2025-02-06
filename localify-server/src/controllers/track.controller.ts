@@ -29,6 +29,7 @@ import fs from "fs";
 import mime from "mime-types";
 import path from "path";
 import sharp from "sharp";
+import { db } from "../db/db.js";
 
 export async function getAllTracksHandler(c: Context) {
   const userId = c.get("userId") || null;
@@ -92,7 +93,11 @@ export async function streamTrackHandler(c: Context) {
     return c.json({ error: "Invalid track ID." }, 400);
   }
 
-  const track = await getTrackById(id);
+  // Get the full track data from the database
+  const track = db
+    .prepare("SELECT path, mimeType FROM tracks WHERE id = ?")
+    .get(id) as { path: string; mimeType: string } | undefined;
+
   if (!track) {
     return c.json({ error: "Track not found" }, 404);
   }
@@ -242,12 +247,12 @@ export async function streamAlbumCoverHandler(c: Context) {
     return c.json({ error: "Invalid album ID." }, 400);
   }
 
-  const album = await getAlbumById(id);
-  if (!album) {
-    return c.json({ error: "Album not found" }, 404);
-  }
+  // Get the full album data to access coverPath
+  const album = db
+    .prepare("SELECT coverPath FROM albums WHERE id = ?")
+    .get(id) as { coverPath: string | null };
 
-  if (!album.coverPath) {
+  if (!album || !album.coverPath) {
     return c.json({ error: "Album has no cover art" }, 404);
   }
 
@@ -696,33 +701,30 @@ export async function streamArtistImageHandler(c: Context) {
     return c.json({ error: "Invalid artist ID." }, 400);
   }
 
-  const artist = await getArtistById(artistId, null);
-  if (!artist) {
-    return c.json({ error: "Artist not found" }, 404);
-  }
+  // Get the full artist data to access imagePath
+  const artist = db
+    .prepare("SELECT imagePath FROM artists WHERE id = ?")
+    .get(artistId) as { imagePath: string | null };
 
-  if (!artist.artist.imagePath) {
+  if (!artist || !artist.imagePath) {
     return c.json({ error: "Artist has no image" }, 404);
   }
 
   // Check if the file exists and is readable
   try {
-    await fs.promises.access(artist.artist.imagePath, fs.constants.R_OK);
+    await fs.promises.access(artist.imagePath, fs.constants.R_OK);
   } catch (err) {
-    console.error(
-      "Artist image not found or not readable:",
-      artist.artist.imagePath
-    );
+    console.error("Artist image not found or not readable:", artist.imagePath);
     return c.json({ error: "Artist image not found or not readable" }, 404);
   }
 
   try {
-    const stat = await fs.promises.stat(artist.artist.imagePath);
+    const stat = await fs.promises.stat(artist.imagePath);
     const fileSize = stat.size;
     const mimeType =
-      mime.lookup(artist.artist.imagePath) || "application/octet-stream";
+      mime.lookup(artist.imagePath) || "application/octet-stream";
 
-    const file = fs.createReadStream(artist.artist.imagePath);
+    const file = fs.createReadStream(artist.imagePath);
     const stream = new ReadableStream({
       start(controller) {
         file.on("data", (chunk) => {

@@ -97,8 +97,8 @@ export const ArtistPage = ({
   const handleArtistUpdate = (data: {
     name: string;
     description: string | null;
-    imagePath: string | null;
     artistId: number;
+    hasImage: boolean;
   }) => {
     if (!artistData) return;
     setArtistData({
@@ -107,7 +107,9 @@ export const ArtistPage = ({
         ...artistData.artist,
         name: data.name,
         description: data.description,
-        imagePath: data.imagePath,
+        hasImage: data.hasImage,
+        createdAt: artistData.artist.createdAt,
+        updatedAt: artistData.artist.updatedAt,
       },
       randomTracks: artistData.randomTracks.map((track) => ({
         ...track,
@@ -135,7 +137,7 @@ export const ArtistPage = ({
           <div className="relative group shrink-0">
             <div className="absolute -inset-2 rounded-2xl bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
             <div className="relative w-60 h-60">
-              {artist.imagePath ? (
+              {artist.hasImage ? (
                 <img
                   src={api.getArtistImageUrl(artist.id)}
                   alt={artist.name}
@@ -280,9 +282,6 @@ export const ArtistPage = ({
                   artistId: artist.id,
                   duration: track.duration,
                   reaction: track.reaction,
-                  // Add required Track properties with placeholder values
-                  path: "",
-                  filename: "",
                   album: "Single",
                   albumId: 0,
                   year: 0,
@@ -322,7 +321,7 @@ export const ArtistPage = ({
           initialData={{
             name: artistData.artist.name,
             description: artistData.artist.description,
-            imagePath: artistData.artist.imagePath,
+            hasImage: artistData.artist.hasImage,
           }}
           onUpdate={handleArtistUpdate}
         />

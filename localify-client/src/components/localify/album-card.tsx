@@ -22,12 +22,11 @@ export const AlbumCard = ({ album, onPlay }: AlbumCardProps) => {
     >
       <div className="relative aspect-square overflow-hidden rounded-lg">
         <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
-        {album.coverPath ? (
+        {album.hasImage ? (
           <img
             src={api.getAlbumCoverUrl(album.id)}
             alt={album.title}
-            loading="lazy"
-            className="w-full h-full object-cover rounded-lg transform group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover rounded-xl"
           />
         ) : (
           <div className="w-full h-full rounded-lg bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">

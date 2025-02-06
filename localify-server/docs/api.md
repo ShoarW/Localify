@@ -49,14 +49,11 @@
 ```typescript
 {
   id: number;
-  path: string;
-  filename: string;
   title: string | null;
-  artist: string | null;
-  albumId: number | null;
   genre: string | null;
   duration: number | null;
-  mimeType: string;
+  albumId: number | null;
+  artistName: string | null;
   reaction: "like" | "dislike" | null;
 }[]
 ```
@@ -69,14 +66,11 @@
 ```typescript
 {
   id: number;
-  path: string;
-  filename: string;
   title: string | null;
-  artist: string | null;
-  albumId: number | null;
   genre: string | null;
   duration: number | null;
-  mimeType: string;
+  albumId: number | null;
+  artistName: string | null;
   reaction: "like" | "dislike" | null;
 }
 ```
@@ -112,13 +106,14 @@
   id: number;
   title: string;
   artist: string | null;
-  year: number | null;
-  coverPath: string | null;
-  type: "single" | "ep" | "album"; // Classification based on track count
+  type: "single" | "ep" | "album";
+  hasImage: boolean;
   tracks: {
     id: number;
     title: string;
-    artist: string;
+    artistName: string | null;
+    duration: number | null;
+    genre: string | null;
     reaction: "like" | "dislike" | null;
   }[];
 }[]
@@ -135,14 +130,15 @@
     id: number;
     title: string;
     artist: string | null;
-    year: number | null;
-    coverPath: string | null;
-    type: "single" | "ep" | "album"; // Classification based on track count
+    type: "single" | "ep" | "album";
+    hasImage: boolean;
   };
   tracks: {
     id: number;
     title: string;
-    artist: string;
+    artistName: string | null;
+    duration: number | null;
+    genre: string | null;
     reaction: "like" | "dislike" | null;
   }[];
 }
@@ -186,24 +182,24 @@
     id: number;
     name: string;
     trackCount: number;
+    hasImage: boolean;
   }[];
   albums: {
     id: number;
     title: string;
+    artistId: number;
     artist: string | null;
-    year: number | null;
-    coverPath: string | null;
     trackCount: number;
-    createdAt: string;
-    updatedAt: string | null;
+    hasImage: boolean;
   }[];
   tracks: {
     id: number;
     title: string;
-    artist: string;
-    albumId: number;
-    duration: number;
+    genre: string | null;
+    duration: number | null;
+    albumId: number | null;
     reaction: "like" | "dislike" | null;
+    artistName: string | null;
   }[];
 }
 ```
@@ -381,141 +377,3 @@
   success: true;
 }
 ```
-
-## Artists
-
-### Get All Artists
-- **URL**: `/artists`
-- **Method**: `GET`
-- **Auth Required**: No
-- **Response**:
-```typescript
-{
-  id: number;
-  name: string;
-  description: string | null;
-  imagePath: string | null;
-  trackCount: number;
-  albumCount: number;
-}[]
-```
-
-### Get Artist by ID
-- **URL**: `/artists/:artistId`
-- **Method**: `GET`
-- **Auth Required**: Optional (reactions only shown for authenticated users)
-- **Response**:
-```typescript
-{
-  artist: {
-    id: number;
-    name: string;
-    description: string | null;
-    imagePath: string | null;
-    createdAt: string;
-    updatedAt: string | null;
-  };
-  randomTracks: {
-    id: number;
-    title: string;
-    artistName: string | null;
-    albumId: number | null;
-    duration: number;
-    reaction: "like" | "dislike" | null;
-  }[];
-  albums: {
-    id: number;
-    title: string;
-    year: number | null;
-    coverPath: string | null;
-    trackCount: number;
-    type: "single" | "ep" | "album";
-    createdAt: string;
-    updatedAt: string | null;
-  }[];
-  singles: {
-    id: number;
-    title: string;
-    artistName: string | null;
-    duration: number;
-    reaction: "like" | "dislike" | null;
-  }[];
-}
-```
-
-### Create Artist
-- **URL**: `/artists`
-- **Method**: `POST`
-- **Auth Required**: Yes (admin only)
-- **Request Body**:
-```typescript
-{
-  name: string;
-  description?: string | null;
-  imagePath?: string | null;
-}
-```
-- **Response** (201 Created):
-```typescript
-{
-  id: number;
-}
-```
-
-### Update Artist
-- **URL**: `/artists/:artistId`
-- **Method**: `PUT`
-- **Auth Required**: Yes (admin only)
-- **Request Body**:
-```typescript
-{
-  id: number;
-  name: string;
-  description?: string | null;
-  imagePath?: string | null;
-}
-```
-- **Response**:
-```typescript
-{
-  id: number;
-}
-```
-
-## Error Responses
-All endpoints may return the following error responses:
-
-### 400 Bad Request
-```typescript
-{
-  error: string; // Description of what went wrong
-}
-```
-
-### 401 Unauthorized
-```typescript
-{
-  error: "Unauthorized";
-}
-```
-
-### 403 Forbidden
-```typescript
-{
-  error: "Not authorized to modify this playlist";
-}
-```
-
-### 404 Not Found
-```typescript
-{
-  error: "Playlist not found" | "Track not found in playlist";
-}
-```
-
-### 500 Internal Server Error
-```typescript
-{
-  error: string; // Description of what went wrong
-}
-``` 

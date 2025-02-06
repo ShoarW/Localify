@@ -143,40 +143,42 @@ export const MusicPlayer = ({
         if ("mediaSession" in navigator) {
           navigator.mediaSession.metadata = new MediaMetadata({
             title: currentTrack.title,
-            artist: currentTrack.artistName,
+            artist: currentTrack.artist,
             album: currentTrack.album,
-            artwork: [
-              {
-                src: api.getTrackCoverUrl(currentTrack),
-                sizes: "96x96",
-                type: "image/jpeg",
-              },
-              {
-                src: api.getTrackCoverUrl(currentTrack),
-                sizes: "128x128",
-                type: "image/jpeg",
-              },
-              {
-                src: api.getTrackCoverUrl(currentTrack),
-                sizes: "192x192",
-                type: "image/jpeg",
-              },
-              {
-                src: api.getTrackCoverUrl(currentTrack),
-                sizes: "256x256",
-                type: "image/jpeg",
-              },
-              {
-                src: api.getTrackCoverUrl(currentTrack),
-                sizes: "384x384",
-                type: "image/jpeg",
-              },
-              {
-                src: api.getTrackCoverUrl(currentTrack),
-                sizes: "512x512",
-                type: "image/jpeg",
-              },
-            ],
+            artwork: currentTrack.albumId
+              ? [
+                  {
+                    src: api.getAlbumCoverUrl(currentTrack.albumId),
+                    sizes: "96x96",
+                    type: "image/jpeg",
+                  },
+                  {
+                    src: api.getAlbumCoverUrl(currentTrack.albumId),
+                    sizes: "128x128",
+                    type: "image/jpeg",
+                  },
+                  {
+                    src: api.getAlbumCoverUrl(currentTrack.albumId),
+                    sizes: "192x192",
+                    type: "image/jpeg",
+                  },
+                  {
+                    src: api.getAlbumCoverUrl(currentTrack.albumId),
+                    sizes: "256x256",
+                    type: "image/jpeg",
+                  },
+                  {
+                    src: api.getAlbumCoverUrl(currentTrack.albumId),
+                    sizes: "384x384",
+                    type: "image/jpeg",
+                  },
+                  {
+                    src: api.getAlbumCoverUrl(currentTrack.albumId),
+                    sizes: "512x512",
+                    type: "image/jpeg",
+                  },
+                ]
+              : [],
           });
 
           // Add media session action handlers
@@ -404,7 +406,7 @@ export const MusicPlayer = ({
               <div className="relative w-14 h-14 rounded-lg shadow-lg transform group-hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center overflow-hidden">
                 {currentTrack.albumId ? (
                   <img
-                    src={api.getTrackCoverUrl(currentTrack)}
+                    src={api.getAlbumCoverUrl(currentTrack.albumId)}
                     alt={currentTrack.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -499,7 +501,7 @@ export const MusicPlayer = ({
             {isLoading ? (
               <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
             ) : isPlaying ? (
-              <Pause className="w-4 h-4 text-white" />
+              <Pause className="w-4 h-4 text-white" fill="white" />
             ) : (
               <Play className="w-4 h-4 text-white" fill="white" />
             )}
@@ -665,10 +667,10 @@ export const MusicPlayer = ({
                     }`}
                     onClick={() => setCurrentTrackIndex(index)}
                   >
-                    <div className="w-10 h-10 rounded bg-gradient-to-br from-white/10 to-white/5 shrink-0 overflow-hidden flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-white/10 to-white/5 shrink-0 overflow-hidden flex items-center justify-center">
                       {track.albumId ? (
                         <img
-                          src={api.getTrackCoverUrl(track)}
+                          src={api.getAlbumCoverUrl(track.albumId)}
                           alt={track.title}
                           className="w-full h-full object-cover"
                           onError={(e) => {
