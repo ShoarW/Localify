@@ -32,7 +32,7 @@ export function seedPermissions(db: Database) {
       "INSERT INTO permissions (role, action) VALUES ('admin', 'delete_user')"
     ).run();
     db.prepare(
-      "INSERT INTO permissions (role, action) VALUES ('admin', '*')"
+      "INSERT INTO permissions (role, action) VALUES ('admin', 'modify_artists')"
     ).run();
     // Add other default permissions as needed
   }

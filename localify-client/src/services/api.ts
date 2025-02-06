@@ -4,6 +4,7 @@ export interface Track {
   filename: string;
   title: string;
   artist: string;
+  artistId: number;
   album: string;
   albumId: number;
   year: number;
@@ -19,6 +20,7 @@ export interface Album {
   id: number;
   title: string;
   artist: string;
+  artistId: number;
   year: number;
   coverPath: string;
   createdAt: number;
@@ -89,6 +91,7 @@ export interface TrackOrder {
 
 export interface SearchResults {
   artists: {
+    id: number;
     name: string;
     trackCount: number;
   }[];
@@ -109,6 +112,34 @@ export interface SearchResults {
     albumId: number;
     duration: number;
     reaction: "like" | "dislike" | null;
+  }[];
+}
+
+export interface Artist {
+  id: number;
+  name: string;
+  description: string | null;
+  imagePath: string | null;
+  trackCount: number;
+  albumCount: number;
+}
+
+export interface ArtistDetails {
+  artist: {
+    id: number;
+    name: string;
+    description: string | null;
+    imagePath: string | null;
+    createdAt: string;
+    updatedAt: string | null;
+  };
+  randomTracks: Track[];
+  albums: Album[];
+  singles: {
+    id: number;
+    title: string;
+    duration: number;
+    reaction: ReactionType;
   }[];
 }
 
@@ -434,5 +465,52 @@ export const api = {
     );
     if (!response.ok) throw new Error("Search failed");
     return response.json();
+  },
+
+  // Artist endpoints
+  getArtists: async (): Promise<Artist[]> => {
+    const response = await fetch(`${API_BASE_URL}/artists`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+    return response.json();
+  },
+
+  getArtist: async (artistId: number): Promise<ArtistDetails> => {
+    const response = await fetch(`${API_BASE_URL}/artists/${artistId}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+    return response.json();
+  },
+
+  updateArtist: async (
+    artistId: number,
+    data: { name: string; description: string | null; image?: File | null }
+  ): Promise<{ id: number; artistId: number }> => {
+    const formData = new FormData();
+    formData.append("name", data.name);
+    if (data.description !== null) {
+      formData.append("description", data.description);
+    }
+    if (data.image) {
+      formData.append("image", data.image);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/artists/${artistId}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: formData,
+    });
+    if (!response.ok) throw new Error("Failed to update artist");
+    return response.json();
+  },
+
+  getArtistImageUrl: (artistId: number): string => {
+    return `${API_BASE_URL}/artists/${artistId}/image`;
   },
 };

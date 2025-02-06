@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -21,6 +21,8 @@ import { PlaylistPage } from "./pages/playlist";
 import { api, Track } from "./services/api";
 import { SearchModal } from "./components/localify/search-modal";
 import React from "react";
+import { ArtistsPage } from "./components/localify/artists-page";
+import { ArtistPage } from "./components/localify/artist-page";
 
 // Create a context for the search modal
 export const SearchContext = React.createContext<{
@@ -81,7 +83,7 @@ const AppLayout = () => {
       <div className="relative h-screen bg-black flex flex-col min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black">
         <div
           className="relative flex flex-1 overflow-hidden"
-          style={{ fontFamily: "'Josefin Sans', sans-serif" }}
+          style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
         >
           <Sidebar />
           <Routes>
@@ -100,7 +102,21 @@ const AppLayout = () => {
                 />
               }
             />
-            <Route path="/albums" element={<AlbumsPage />} />
+            <Route
+              path="/albums"
+              element={
+                <AlbumsPage
+                  onPlayAlbum={async (albumId) => {
+                    try {
+                      const albumData = await api.getAlbum(albumId);
+                      handlePlayTrack(albumData.tracks, 0);
+                    } catch (error) {
+                      console.error("Failed to play album:", error);
+                    }
+                  }}
+                />
+              }
+            />
             <Route
               path="/albums/:id"
               element={
@@ -108,6 +124,17 @@ const AppLayout = () => {
                   currentTrackId={currentTrackId}
                   isPlaying={isPlaying}
                   onPlayAlbum={handlePlayTrack}
+                />
+              }
+            />
+            <Route path="/artists" element={<ArtistsPage />} />
+            <Route
+              path="/artists/:id"
+              element={
+                <ArtistPage
+                  currentTrackId={currentTrackId}
+                  isPlaying={isPlaying}
+                  onPlayTrack={handlePlayTrack}
                 />
               }
             />
@@ -159,7 +186,7 @@ function App() {
   return (
     <Router>
       <link
-        href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&display=swap"
         rel="stylesheet"
       />
       <Routes>

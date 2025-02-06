@@ -22,6 +22,7 @@ interface TrackItemProps {
   trackId: number;
   number?: number;
   onClick?: () => void;
+  onReactionUpdate?: (trackId: number, reaction: ReactionType) => void;
 }
 
 export const TrackItem = ({
@@ -34,6 +35,7 @@ export const TrackItem = ({
   trackId,
   number,
   onClick,
+  onReactionUpdate,
 }: TrackItemProps) => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -41,6 +43,7 @@ export const TrackItem = ({
   const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reactionLoading, setReactionLoading] = useState(false);
 
   useEffect(() => {
     const fetchPlaylists = async () => {
@@ -104,6 +107,21 @@ export const TrackItem = ({
     setError(null);
   };
 
+  const handleReaction = async (type: "like" | "dislike") => {
+    if (reactionLoading) return;
+    setReactionLoading(true);
+
+    try {
+      const newType = type === reaction ? null : type;
+      const { reaction: newReaction } = await api.setReaction(trackId, newType);
+      onReactionUpdate?.(trackId, newReaction);
+    } catch (error) {
+      console.error("Failed to set reaction:", error);
+    } finally {
+      setReactionLoading(false);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
@@ -160,6 +178,36 @@ export const TrackItem = ({
             data-context-menu="true"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleReaction("like")}
+                disabled={reactionLoading}
+                className={`p-1.5 rounded-lg transition-all duration-300 ${
+                  reaction === "like"
+                    ? "text-green-500 bg-green-500/10"
+                    : "text-white/40 hover:text-white/60 hover:bg-white/5 opacity-0 group-hover:opacity-100"
+                } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <ThumbsUp
+                  className="w-4 h-4"
+                  fill={reaction === "like" ? "currentColor" : "none"}
+                />
+              </button>
+              <button
+                onClick={() => handleReaction("dislike")}
+                disabled={reactionLoading}
+                className={`p-1.5 rounded-lg transition-all duration-300 ${
+                  reaction === "dislike"
+                    ? "text-red-500 bg-red-500/10"
+                    : "text-white/40 hover:text-white/60 hover:bg-white/5 opacity-0 group-hover:opacity-100"
+                } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <ThumbsDown
+                  className="w-4 h-4"
+                  fill={reaction === "dislike" ? "currentColor" : "none"}
+                />
+              </button>
+            </div>
             <ContextMenu
               items={[
                 {
@@ -183,38 +231,6 @@ export const TrackItem = ({
                       },
                     },
                   ],
-                },
-                {
-                  label: reaction === "like" ? "Unlike" : "Like",
-                  icon: (
-                    <ThumbsUp
-                      className={`w-4 h-4 ${
-                        reaction === "like"
-                          ? "text-green-500 fill-green-500"
-                          : ""
-                      }`}
-                    />
-                  ),
-                  onClick: (e: React.MouseEvent) => {
-                    e.stopPropagation();
-                    // TODO: Add like functionality
-                  },
-                },
-                {
-                  label: reaction === "dislike" ? "Remove Dislike" : "Dislike",
-                  icon: (
-                    <ThumbsDown
-                      className={`w-4 h-4 ${
-                        reaction === "dislike"
-                          ? "text-red-500 fill-red-500"
-                          : ""
-                      }`}
-                    />
-                  ),
-                  onClick: (e: React.MouseEvent) => {
-                    e.stopPropagation();
-                    // TODO: Add dislike functionality
-                  },
                 },
               ]}
             >

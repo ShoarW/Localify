@@ -19,10 +19,15 @@ import {
   deletePlaylist,
   updatePlaylistOrder,
   advancedSearch,
+  getArtistById,
+  getAllArtists,
+  createOrUpdateArtist,
 } from "../services/track.service.js";
 import { config } from "../config.js";
 import fs from "fs";
 import mime from "mime-types";
+import path from "path";
+import sharp from "sharp";
 
 export async function getAllTracksHandler(c: Context) {
   const userId = c.get("userId") || null;
@@ -205,22 +210,11 @@ export async function getAlbumWithTracksHandler(c: Context) {
 
   // Get userId from context and log it
   const userId = c.get("userId") || null;
-  console.log("Getting album tracks with userId:", userId);
 
   const albumWithTracks = await getAlbumWithTracks(id, userId);
   if (!albumWithTracks) {
     return c.json({ error: "Album not found" }, 404);
   }
-
-  // Log the tracks and their reactions
-  console.log(
-    "Album tracks with reactions:",
-    albumWithTracks.tracks.map((t) => ({
-      id: t.id,
-      title: t.title,
-      reaction: t.reaction,
-    }))
-  );
 
   // If album has a cover image, prepare it for streaming
   if (albumWithTracks.album.coverPath) {
@@ -557,5 +551,215 @@ export async function advancedSearchHandler(c: Context) {
   } catch (error) {
     console.error("Error performing advanced search:", error);
     return c.json({ error: "Failed to perform search" }, 500);
+  }
+}
+
+// Artist-related handlers
+export async function getArtistByIdHandler(c: Context) {
+  const artistId = parseInt(c.req.param("artistId"));
+  if (isNaN(artistId)) {
+    return c.json({ error: "Invalid artist ID." }, 400);
+  }
+
+  const userId = c.get("userId") as number | null;
+
+  try {
+    const artist = await getArtistById(artistId, userId);
+    if (!artist) {
+      return c.json({ error: "Artist not found" }, 404);
+    }
+    return c.json(artist);
+  } catch (error) {
+    console.error("Error getting artist:", error);
+    return c.json({ error: "Failed to get artist" }, 500);
+  }
+}
+
+export async function getAllArtistsHandler(c: Context) {
+  try {
+    const artists = await getAllArtists();
+    return c.json(artists);
+  } catch (error) {
+    console.error("Error getting artists:", error);
+    return c.json({ error: "Failed to get artists" }, 500);
+  }
+}
+
+export async function createOrUpdateArtistHandler(c: Context) {
+  try {
+    const formData = await c.req.formData();
+    const name = formData.get("name") as string;
+    const description = formData.get("description") as string | null;
+    const imageFile = formData.get("image") as File | null;
+    const urlArtistId = c.req.param("artistId");
+
+    if (!name) {
+      return c.json({ error: "Invalid artist name" }, 400);
+    }
+
+    let artist: any = {
+      name,
+      description: description || null,
+    };
+
+    // Handle artist ID for updates
+    if (urlArtistId) {
+      const id = parseInt(urlArtistId);
+      if (isNaN(id)) {
+        return c.json({ error: "Invalid artist ID" }, 400);
+      }
+      artist.id = id;
+    }
+
+    // Handle image upload if provided
+    if (imageFile) {
+      const fileExtension =
+        imageFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      if (!["jpg", "jpeg", "png"].includes(fileExtension)) {
+        return c.json(
+          {
+            error: "Invalid image format. Only jpg, jpeg, and png are allowed.",
+          },
+          400
+        );
+      }
+
+      // Create the image path
+      const imagePath = path.join(
+        config.STORAGE_PATH,
+        "assets",
+        "artist",
+        `${artist.id || "temp"}.${fileExtension}`
+      );
+
+      // Convert File to Buffer
+      const arrayBuffer = await imageFile.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Process image with sharp
+      await sharp(buffer)
+        .resize(600, 600, {
+          fit: "inside", // Maintain aspect ratio
+          withoutEnlargement: true, // Don't upscale if image is smaller
+        })
+        .jpeg({ quality: 85 }) // Convert to JPEG with good quality
+        .toFile(imagePath);
+
+      // Update the artist object with the image path
+      artist.imagePath = imagePath;
+    }
+
+    const artistId = await createOrUpdateArtist(artist);
+
+    // If this was a new artist and we saved a temporary image, rename it
+    if (!artist.id && imageFile) {
+      const oldPath = path.join(
+        config.STORAGE_PATH,
+        "assets",
+        "artist",
+        "temp.jpg" // We're always saving as jpg now
+      );
+      const newPath = path.join(
+        config.STORAGE_PATH,
+        "assets",
+        "artist",
+        `${artistId}.jpg`
+      );
+      await fs.promises.rename(oldPath, newPath);
+
+      // Update the image path in the database
+      await createOrUpdateArtist({
+        id: artistId,
+        name: artist.name,
+        description: artist.description,
+        imagePath: newPath,
+      });
+    }
+
+    return c.json({ id: artistId }, artist.id ? 200 : 201);
+  } catch (error) {
+    console.error("Error creating/updating artist:", error);
+    if (
+      error instanceof Error &&
+      error.message === "An artist with this name already exists"
+    ) {
+      return c.json({ error: error.message }, 409); // 409 Conflict
+    }
+    return c.json({ error: "Failed to create/update artist" }, 500);
+  }
+}
+
+export async function streamArtistImageHandler(c: Context) {
+  const artistId = parseInt(c.req.param("artistId"));
+  if (isNaN(artistId)) {
+    return c.json({ error: "Invalid artist ID." }, 400);
+  }
+
+  const artist = await getArtistById(artistId, null);
+  if (!artist) {
+    return c.json({ error: "Artist not found" }, 404);
+  }
+
+  if (!artist.artist.imagePath) {
+    return c.json({ error: "Artist has no image" }, 404);
+  }
+
+  // Check if the file exists and is readable
+  try {
+    await fs.promises.access(artist.artist.imagePath, fs.constants.R_OK);
+  } catch (err) {
+    console.error(
+      "Artist image not found or not readable:",
+      artist.artist.imagePath
+    );
+    return c.json({ error: "Artist image not found or not readable" }, 404);
+  }
+
+  try {
+    const stat = await fs.promises.stat(artist.artist.imagePath);
+    const fileSize = stat.size;
+    const mimeType =
+      mime.lookup(artist.artist.imagePath) || "application/octet-stream";
+
+    const file = fs.createReadStream(artist.artist.imagePath);
+    const stream = new ReadableStream({
+      start(controller) {
+        file.on("data", (chunk) => {
+          try {
+            controller.enqueue(chunk);
+          } catch (error) {
+            console.error("Error enqueueing chunk:", error);
+            controller.error(error);
+            file.destroy();
+          }
+        });
+
+        file.on("end", () => {
+          try {
+            controller.close();
+          } catch (error) {
+            console.error("Error closing controller:", error);
+          }
+        });
+
+        file.on("error", (err) => {
+          console.error("File stream error:", err);
+          controller.error(err);
+          file.destroy();
+        });
+      },
+      cancel() {
+        file.destroy();
+      },
+    });
+
+    // Set cache headers since artist images rarely change
+    c.header("Cache-Control", "public, max-age=31536000"); // Cache for 1 year
+    c.header("Content-Length", fileSize.toString());
+    c.header("Content-Type", mimeType);
+    return c.body(stream);
+  } catch (error) {
+    console.error("Error streaming artist image:", error);
+    return c.json({ error: "Error streaming artist image" }, 500);
   }
 }

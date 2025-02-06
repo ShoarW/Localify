@@ -3,7 +3,7 @@ export interface Track {
   path: string;
   filename: string;
   title: string | null;
-  artist: string | null;
+  artistId: number | null;
   albumId: number | null;
   genre: string | null;
   year: number | null;
@@ -39,17 +39,17 @@ interface Permission {
 
 export interface Playlist {
   id?: number;
-  userId: number; // Foreign key referencing the User table
+  userId: number;
   name: string;
-  description?: string | null;
-  createdAt: Date;
+  description: string | null;
+  ownerName?: string;
+  createdAt: number;
+  tracks?: PlaylistTrack[];
 }
 
-export interface PlaylistTrack {
-  playlistId: number; // Foreign key referencing the Playlist table
-  trackId: number; // Foreign key referencing the Track table
-  position: number; // Order of the track within the playlist
-  timestamp: Date;
+export interface PlaylistTrack extends Track {
+  position: number;
+  reaction?: "like" | "dislike" | null;
 }
 
 export interface Like {
@@ -61,9 +61,18 @@ export interface Like {
 export interface Album {
   id?: number;
   title: string;
-  artist: string | null;
+  artistId: number | null;
   year: number | null;
   coverPath: string | null;
+  createdAt: number;
+  updatedAt: number | null;
+}
+
+export interface Artist {
+  id?: number;
+  name: string;
+  description: string | null;
+  imagePath: string | null;
   createdAt: number;
   updatedAt: number | null;
 }

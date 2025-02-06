@@ -137,13 +137,47 @@ export const SearchModal = ({
                   </h3>
                   <div className="space-y-2">
                     {results.artists.map((artist) => (
-                      <div
-                        key={artist.name}
+                      <Link
+                        key={artist.id}
+                        to={`/artists/${artist.id}`}
+                        onClick={handleClose}
                         className="flex items-center justify-between p-3 rounded-xl hover:bg-white/10 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
-                            <User className="w-5 h-5 text-white/40" />
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center overflow-hidden">
+                            {api.getArtistImageUrl(artist.id) ? (
+                              <img
+                                src={`${api.getArtistImageUrl(
+                                  artist.id
+                                )}?t=${Date.now()}`}
+                                alt={artist.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  const parent = target.parentElement;
+                                  if (!parent) return;
+
+                                  // Clean up any existing fallback icons
+                                  const existingIcons =
+                                    parent.querySelectorAll(".fallback-icon");
+                                  existingIcons.forEach((icon) =>
+                                    icon.remove()
+                                  );
+
+                                  // Hide the failed image
+                                  target.style.display = "none";
+
+                                  // Add new icon with a class for future cleanup
+                                  const icon = document.createElement("div");
+                                  icon.className = "fallback-icon";
+                                  icon.innerHTML =
+                                    '<svg class="w-5 h-5 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+                                  parent.appendChild(icon);
+                                }}
+                              />
+                            ) : (
+                              <User className="w-5 h-5 text-white/40" />
+                            )}
                           </div>
                           <div>
                             <p className="text-white font-medium">
@@ -154,7 +188,7 @@ export const SearchModal = ({
                             </p>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </div>

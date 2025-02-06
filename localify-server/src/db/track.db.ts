@@ -2,22 +2,37 @@ import type { Database } from "better-sqlite3";
 import type { Track, Album, Playlist } from "../types/model.js";
 
 export function createTracksTable(db: Database) {
-  // First create albums table
+  // Create artists table first
   db.prepare(
     `
-    CREATE TABLE IF NOT EXISTS albums (
+    CREATE TABLE IF NOT EXISTS artists (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        artist TEXT,
-        year INTEGER,
-        coverPath TEXT,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        imagePath TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         updatedAt DATETIME DEFAULT NULL
     );
     `
   ).run();
 
-  // Then create tracks table with album reference
+  // First create albums table with artist reference
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS albums (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        artistId INTEGER,
+        year INTEGER,
+        coverPath TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT NULL,
+        FOREIGN KEY (artistId) REFERENCES artists(id) ON DELETE SET NULL
+    );
+    `
+  ).run();
+
+  // Then create tracks table with album and artist references
   db.prepare(
     `
     CREATE TABLE IF NOT EXISTS tracks (
@@ -25,14 +40,15 @@ export function createTracksTable(db: Database) {
         path TEXT UNIQUE NOT NULL,
         filename TEXT NOT NULL,
         title TEXT,
-        artist TEXT,
+        artistId INTEGER,
         albumId INTEGER,
         genre TEXT,
         duration REAL,
         mimeType TEXT NOT NULL,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         updatedAt DATETIME DEFAULT NULL,
-        FOREIGN KEY (albumId) REFERENCES albums(id)
+        FOREIGN KEY (albumId) REFERENCES albums(id) ON DELETE SET NULL,
+        FOREIGN KEY (artistId) REFERENCES artists(id) ON DELETE SET NULL
     );
     `
   ).run();
@@ -84,24 +100,44 @@ export function createTracksTable(db: Database) {
 }
 
 // Album-related functions
-export function getAlbumById(db: Database, id: number): Album | undefined {
-  return db.prepare("SELECT * FROM albums WHERE id = ?").get(id) as
-    | Album
-    | undefined;
+export function getAlbumById(
+  db: Database,
+  id: number
+): (Album & { artist: string | null }) | undefined {
+  return db
+    .prepare(
+      `
+    SELECT a.*, ar.name as artist 
+    FROM albums a
+    LEFT JOIN artists ar ON a.artistId = ar.id
+    WHERE a.id = ?
+  `
+    )
+    .get(id) as (Album & { artist: string | null }) | undefined;
 }
 
-export function getAllAlbums(db: Database): Album[] {
-  return db.prepare("SELECT * FROM albums").all() as Album[];
+export function getAllAlbums(
+  db: Database
+): (Album & { artist: string | null })[] {
+  return db
+    .prepare(
+      `
+    SELECT a.*, ar.name as artist 
+    FROM albums a
+    LEFT JOIN artists ar ON a.artistId = ar.id
+  `
+    )
+    .all() as (Album & { artist: string | null })[];
 }
 
 export function addAlbum(db: Database, album: Omit<Album, "id">): number {
   const insertQuery = db.prepare(`
-    INSERT INTO albums (title, artist, year, coverPath, createdAt, updatedAt)
+    INSERT INTO albums (title, artistId, year, coverPath, createdAt, updatedAt)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
   const result = insertQuery.run(
     album.title,
-    album.artist,
+    album.artistId,
     album.year,
     album.coverPath,
     album.createdAt,
@@ -145,14 +181,14 @@ export function getTrackByPath(
 
 export function addTrack(db: Database, track: Omit<Track, "id">): void {
   const insertQuery = db.prepare(`
-    INSERT INTO tracks (path, filename, title, artist, albumId, genre, duration, mimeType, createdAt, updatedAt)
+    INSERT INTO tracks (path, filename, title, artistId, albumId, genre, duration, mimeType, createdAt, updatedAt)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   insertQuery.run(
     track.path,
     track.filename,
     track.title,
-    track.artist,
+    track.artistId,
     track.albumId,
     track.genre,
     track.duration,
@@ -170,9 +206,15 @@ export function deleteTrack(db: Database, id: number): boolean {
 
 export function searchTracks(db: Database, query: string): Track[] {
   const sqlQuery = db.prepare(`
-        SELECT * FROM tracks
-        WHERE title LIKE ? OR artist LIKE ? OR album LIKE ? OR filename LIKE ?
-    `);
+    SELECT t.*
+    FROM tracks t
+    LEFT JOIN artists a ON t.artistId = a.id
+    LEFT JOIN albums al ON t.albumId = al.id
+    WHERE t.title LIKE ? 
+       OR a.name LIKE ? 
+       OR al.title LIKE ? 
+       OR t.filename LIKE ?
+  `);
   const searchTerm = `%${query}%`;
   return sqlQuery.all(
     searchTerm,
@@ -331,13 +373,33 @@ export function searchTracksWithReactions(
   return db
     .prepare(
       `
-    SELECT t.*, r.type as reaction
-    FROM tracks t
-    LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
-    WHERE title LIKE ? OR artist LIKE ? OR filename LIKE ?
-  `
+      SELECT t.*, r.type as reaction
+      FROM tracks t
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists a ON t.artistId = a.id
+      LEFT JOIN albums al ON t.albumId = al.id
+      WHERE t.title LIKE ? 
+         OR a.name LIKE ? 
+         OR al.title LIKE ? 
+         OR t.filename LIKE ?
+      ORDER BY 
+        CASE 
+          WHEN t.title LIKE ? THEN 1
+          WHEN a.name LIKE ? THEN 2
+          ELSE 3
+        END,
+        t.title ASC
+    `
     )
-    .all(userId, searchTerm, searchTerm, searchTerm) as (Track & {
+    .all(
+      userId,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm
+    ) as (Track & {
     reaction: "like" | "dislike" | null;
   })[];
 }
@@ -370,7 +432,10 @@ export function getTracksByAlbumIdWithReactions(
 export function getAllAlbumsWithTracks(
   db: Database,
   userId: number | null
-): (Album & { tracks: (Track & { reaction: "like" | "dislike" | null })[] })[] {
+): (Album & {
+  artist: string | null;
+  tracks: (Track & { reaction: "like" | "dislike" | null })[];
+})[] {
   const albums = getAllAlbums(db);
 
   return albums.map((album) => {
@@ -380,6 +445,23 @@ export function getAllAlbumsWithTracks(
       tracks,
     };
   });
+}
+
+export function getAlbumWithTracks(
+  db: Database,
+  id: number,
+  userId: number | null
+):
+  | {
+      album: Album & { artist: string | null };
+      tracks: (Track & { reaction: "like" | "dislike" | null })[];
+    }
+  | undefined {
+  const album = getAlbumById(db, id);
+  if (!album) return undefined;
+
+  const tracks = getTracksByAlbumIdWithReactions(db, album.id!, userId);
+  return { album, tracks };
 }
 
 // Playlist-related functions
@@ -538,40 +620,47 @@ export function advancedSearch(
   userId: number | null,
   limit: number = 5
 ): {
-  artists: { name: string; trackCount: number }[];
+  artists: { id: number; name: string; trackCount: number }[];
   albums: (Album & { artist: string | null; trackCount: number })[];
   tracks: (Track & { reaction: "like" | "dislike" | null })[];
 } {
   const searchTerm = `%${query}%`;
 
-  // Search for unique artists and their track counts
+  // Search for artists and their track counts
   const artists = db
     .prepare(
       `
-      SELECT DISTINCT artist as name, COUNT(*) as trackCount
-      FROM tracks
-      WHERE artist IS NOT NULL AND artist LIKE ?
-      GROUP BY artist
+      SELECT a.id, a.name, COUNT(t.id) as trackCount
+      FROM artists a
+      LEFT JOIN tracks t ON t.artistId = a.id
+      WHERE a.name LIKE ?
+      GROUP BY a.id
       ORDER BY trackCount DESC
       LIMIT ?
     `
     )
-    .all(searchTerm, limit) as { name: string; trackCount: number }[];
+    .all(searchTerm, limit) as {
+    id: number;
+    name: string;
+    trackCount: number;
+  }[];
 
-  // Search for albums with their track counts
+  // Search for albums with their track counts and artist names
   const albums = db
     .prepare(
       `
-      SELECT a.*, COUNT(t.id) as trackCount
+      SELECT a.*, ar.name as artist, COUNT(t.id) as trackCount
       FROM albums a
       LEFT JOIN tracks t ON t.albumId = a.id
-      WHERE a.title LIKE ? OR a.artist LIKE ?
+      LEFT JOIN artists ar ON a.artistId = ar.id
+      WHERE a.title LIKE ? OR ar.name LIKE ?
       GROUP BY a.id
       ORDER BY a.title ASC
       LIMIT ?
     `
     )
     .all(searchTerm, searchTerm, limit) as (Album & {
+    artist: string | null;
     trackCount: number;
   })[];
 
@@ -583,13 +672,14 @@ export function advancedSearch(
           SELECT t.*, r.type as reaction
           FROM tracks t
           LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+          LEFT JOIN artists a ON t.artistId = a.id
           WHERE t.title LIKE ? 
-             OR t.artist LIKE ? 
+             OR a.name LIKE ? 
              OR t.filename LIKE ?
           ORDER BY 
             CASE 
               WHEN t.title LIKE ? THEN 1
-              WHEN t.artist LIKE ? THEN 2
+              WHEN a.name LIKE ? THEN 2
               ELSE 3
             END,
             t.title ASC
@@ -610,13 +700,14 @@ export function advancedSearch(
           `
           SELECT t.*, NULL as reaction
           FROM tracks t
+          LEFT JOIN artists a ON t.artistId = a.id
           WHERE t.title LIKE ? 
-             OR t.artist LIKE ? 
+             OR a.name LIKE ? 
              OR t.filename LIKE ?
           ORDER BY 
             CASE 
               WHEN t.title LIKE ? THEN 1
-              WHEN t.artist LIKE ? THEN 2
+              WHEN a.name LIKE ? THEN 2
               ELSE 3
             END,
             t.title ASC
@@ -630,4 +721,180 @@ export function advancedSearch(
     albums,
     tracks: tracks as (Track & { reaction: "like" | "dislike" | null })[],
   };
+}
+
+// Add artist-related functions
+export function getArtistById(
+  db: Database,
+  artistId: number,
+  userId: number | null
+):
+  | {
+      artist: {
+        id: number;
+        name: string;
+        description: string | null;
+        imagePath: string | null;
+        createdAt: string;
+        updatedAt: string | null;
+      };
+      randomTracks: (Track & { reaction: "like" | "dislike" | null })[];
+      albums: (Album & { trackCount: number })[];
+      singles: (Track & { reaction: "like" | "dislike" | null })[];
+    }
+  | undefined {
+  const artist = db
+    .prepare(`SELECT * FROM artists WHERE id = ?`)
+    .get(artistId) as
+    | {
+        id: number;
+        name: string;
+        description: string | null;
+        imagePath: string | null;
+        createdAt: string;
+        updatedAt: string | null;
+      }
+    | undefined;
+
+  if (!artist) return undefined;
+
+  // Get 5 random tracks
+  const randomTracks = db
+    .prepare(
+      `
+      SELECT t.*, r.type as reaction
+      FROM tracks t
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      WHERE t.artistId = ?
+      ORDER BY RANDOM()
+      LIMIT 5
+    `
+    )
+    .all(userId, artistId) as (Track & {
+    reaction: "like" | "dislike" | null;
+  })[];
+
+  // Get all albums with track counts
+  const albums = db
+    .prepare(
+      `
+      SELECT a.*, COUNT(t.id) as trackCount
+      FROM albums a
+      LEFT JOIN tracks t ON t.albumId = a.id
+      WHERE a.artistId = ?
+      GROUP BY a.id
+      ORDER BY a.year DESC, a.title ASC
+    `
+    )
+    .all(artistId) as (Album & { trackCount: number })[];
+
+  // Get singles (tracks without albums)
+  const singles = db
+    .prepare(
+      `
+      SELECT t.*, r.type as reaction
+      FROM tracks t
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      WHERE t.artistId = ? AND t.albumId IS NULL
+      ORDER BY t.createdAt DESC
+    `
+    )
+    .all(userId, artistId) as (Track & {
+    reaction: "like" | "dislike" | null;
+  })[];
+
+  return {
+    artist,
+    randomTracks,
+    albums,
+    singles,
+  };
+}
+
+export function getAllArtists(db: Database): {
+  id: number;
+  name: string;
+  description: string | null;
+  imagePath: string | null;
+  trackCount: number;
+  albumCount: number;
+}[] {
+  return db
+    .prepare(
+      `
+      SELECT 
+        a.*,
+        COUNT(DISTINCT t.id) as trackCount,
+        COUNT(DISTINCT al.id) as albumCount
+      FROM artists a
+      LEFT JOIN tracks t ON t.artistId = a.id
+      LEFT JOIN albums al ON al.artistId = a.id
+      GROUP BY a.id
+      ORDER BY a.name ASC
+    `
+    )
+    .all() as {
+    id: number;
+    name: string;
+    description: string | null;
+    imagePath: string | null;
+    trackCount: number;
+    albumCount: number;
+  }[];
+}
+
+export function createOrUpdateArtist(
+  db: Database,
+  artist: {
+    id?: number;
+    name: string;
+    description?: string | null;
+    imagePath?: string | null;
+  }
+): number {
+  if (artist.id) {
+    // For updates, first check if the new name conflicts with any other artist
+    const existingArtist = db
+      .prepare("SELECT id FROM artists WHERE name = ? AND id != ?")
+      .get(artist.name, artist.id) as { id: number } | undefined;
+
+    if (existingArtist) {
+      throw new Error("An artist with this name already exists");
+    }
+
+    // Update existing artist
+    const updateQuery = db.prepare(`
+      UPDATE artists 
+      SET name = ?, description = ?, imagePath = ?, updatedAt = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    updateQuery.run(
+      artist.name,
+      artist.description,
+      artist.imagePath,
+      artist.id
+    );
+    return artist.id;
+  } else {
+    // For new artists, check if name already exists
+    const existingArtist = db
+      .prepare("SELECT id FROM artists WHERE name = ?")
+      .get(artist.name) as { id: number } | undefined;
+
+    if (existingArtist) {
+      throw new Error("An artist with this name already exists");
+    }
+
+    // Create new artist
+    const insertQuery = db.prepare(`
+      INSERT INTO artists (name, description, imagePath)
+      VALUES (?, ?, ?)
+    `);
+    const result = insertQuery.run(
+      artist.name,
+      artist.description,
+      artist.imagePath
+    );
+    return result.lastInsertRowid as number;
+  }
 }

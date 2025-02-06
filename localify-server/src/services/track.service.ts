@@ -32,6 +32,10 @@ import {
   updatePlaylistOrder as dbUpdatePlaylistOrder,
   isPlaylistOwner as dbIsPlaylistOwner,
   advancedSearch as dbAdvancedSearch,
+  getArtistById as dbGetArtistById,
+  getAllArtists as dbGetAllArtists,
+  createOrUpdateArtist as dbCreateOrUpdateArtist,
+  getAlbumWithTracks as dbGetAlbumWithTracks,
 } from "../db/track.db.js";
 import type { Track, Album, Playlist } from "../types/model.js";
 import mime from "mime-types";
@@ -158,25 +162,35 @@ function cleanAlbumTitle(albumTitle: string): string {
   return albumTitle.replace(/\s*(?:CD|Disc)\s*\d+/i, "").trim();
 }
 
-async function getAlbumArtist(
-  db: Database,
-  title: string,
-  newTrackArtist: string | null | undefined
-): Promise<string | null> {
-  // If we already have an album, use its artist
-  const existingAlbum = findAlbumByTitle(db, title);
-  if (existingAlbum) {
-    return existingAlbum.artist;
+async function findOrCreateArtist(
+  artistName: string | null
+): Promise<number | null> {
+  if (!artistName) return null;
+
+  // Try to find existing artist
+  const existingArtist = db
+    .prepare("SELECT id FROM artists WHERE name = ?")
+    .get(artistName) as { id: number } | undefined;
+
+  if (existingArtist) {
+    return existingArtist.id;
   }
 
-  // For completely new albums, start with the track's artist
-  return newTrackArtist || null;
+  // Create new artist
+  const result = db
+    .prepare("INSERT INTO artists (name) VALUES (?)")
+    .run(artistName);
+
+  return result.lastInsertRowid as number;
 }
 
 export async function addTrack(filePath: string): Promise<void> {
   try {
     const metadata = await mm.parseFile(filePath);
     const mimeType = mime.lookup(filePath) || "application/octet-stream";
+
+    // Find or create artist
+    const artistId = await findOrCreateArtist(metadata.common.artist || null);
 
     // Try to find or create album if we have album metadata
     let albumId: number | null = null;
@@ -190,26 +204,6 @@ export async function addTrack(filePath: string): Promise<void> {
       if (existingAlbum) {
         albumId = existingAlbum.id!;
 
-        // Check if we need to update the album artist to Various Artists
-        const albumTracks = await getTracksByAlbumId(albumId);
-        if (albumTracks.length > 0) {
-          const trackArtist = metadata.common.artist;
-          const hasMultipleArtists = albumTracks.some(
-            (track) => track.artist !== trackArtist
-          );
-
-          if (
-            hasMultipleArtists &&
-            existingAlbum.artist !== "Various Artists"
-          ) {
-            // Update album to Various Artists
-            db.prepare("UPDATE albums SET artist = ? WHERE id = ?").run(
-              "Various Artists",
-              albumId
-            );
-          }
-        }
-
         // Update cover art if not set and found in directory
         if (!existingAlbum.coverPath) {
           const coverPath = await findCoverArtInDirectory(directoryPath);
@@ -221,20 +215,13 @@ export async function addTrack(filePath: string): Promise<void> {
           }
         }
       } else {
-        // Get the appropriate artist for the new album
-        const albumArtist = await getAlbumArtist(
-          db,
-          albumTitle,
-          metadata.common.albumartist || metadata.common.artist
-        );
-
         // Look for cover art in the album directory
         const coverPath = await findCoverArtInDirectory(directoryPath);
 
         // Create new album
         const album: Omit<Album, "id"> = {
           title: albumTitle,
-          artist: albumArtist,
+          artistId: artistId,
           year: metadata.common.year || null,
           coverPath: coverPath,
           createdAt: new Date().getTime(),
@@ -248,7 +235,7 @@ export async function addTrack(filePath: string): Promise<void> {
       path: filePath,
       filename: path.basename(filePath),
       title: metadata.common.title || null,
-      artist: metadata.common.artist || null,
+      artistId: artistId,
       albumId: albumId,
       genre: metadata.common.genre ? metadata.common.genre.join(", ") : null,
       year: metadata.common.year || null,
@@ -301,12 +288,15 @@ export async function searchTracks(
 }
 
 // Album-related functions
-export async function getAlbumById(id: number): Promise<Album | undefined> {
+export async function getAlbumById(
+  id: number
+): Promise<(Album & { artist: string | null }) | undefined> {
   return dbGetAlbumById(db, id);
 }
 
 export async function getAllAlbums(userId: number | null = null): Promise<
   (Album & {
+    artist: string | null;
     tracks: (Track & { reaction: "like" | "dislike" | null })[];
   })[]
 > {
@@ -318,17 +308,12 @@ export async function getAlbumWithTracks(
   userId: number | null = null
 ): Promise<
   | {
-      album: Album;
+      album: Album & { artist: string | null };
       tracks: (Track & { reaction: "like" | "dislike" | null })[];
     }
   | undefined
 > {
-  const album = await getAlbumById(id);
-  if (!album) return undefined;
-
-  // Use the function that includes reactions
-  const tracks = dbGetTracksByAlbumIdWithReactions(db, album.id!, userId);
-  return { album, tracks };
+  return dbGetAlbumWithTracks(db, id, userId);
 }
 
 export async function getTracksByAlbumId(albumId: number): Promise<Track[]> {
@@ -432,7 +417,18 @@ export async function getPlaylistById(
     })
   | undefined
 > {
-  return dbGetPlaylistById(db, playlistId, userId);
+  const playlist = await dbGetPlaylistById(db, playlistId, userId);
+  if (!playlist) return undefined;
+  const tracksWithPosition = playlist.tracks.map((track, index) => ({
+    ...track,
+    position: track.position ?? index,
+    reaction: track.reaction ?? null,
+  }));
+  return {
+    ...playlist,
+    tracks: tracksWithPosition,
+    ownerName: playlist.ownerName || "Unknown",
+  };
 }
 
 export async function getUserPlaylists(
@@ -471,4 +467,49 @@ export async function advancedSearch(
   tracks: (Track & { reaction: "like" | "dislike" | null })[];
 }> {
   return dbAdvancedSearch(db, query, userId, limit);
+}
+
+// Artist-related functions
+export async function getArtistById(
+  artistId: number,
+  userId: number | null = null
+): Promise<
+  | {
+      artist: {
+        id: number;
+        name: string;
+        description: string | null;
+        imagePath: string | null;
+        createdAt: string;
+        updatedAt: string | null;
+      };
+      randomTracks: (Track & { reaction: "like" | "dislike" | null })[];
+      albums: (Album & { trackCount: number })[];
+      singles: (Track & { reaction: "like" | "dislike" | null })[];
+    }
+  | undefined
+> {
+  return dbGetArtistById(db, artistId, userId);
+}
+
+export async function getAllArtists(): Promise<
+  {
+    id: number;
+    name: string;
+    description: string | null;
+    imagePath: string | null;
+    trackCount: number;
+    albumCount: number;
+  }[]
+> {
+  return dbGetAllArtists(db);
+}
+
+export async function createOrUpdateArtist(artist: {
+  id?: number;
+  name: string;
+  description?: string | null;
+  imagePath?: string | null;
+}): Promise<number> {
+  return dbCreateOrUpdateArtist(db, artist);
 }

@@ -304,39 +304,48 @@ export const MusicPlayer = ({
       {/* Track Info Section */}
       <div className="flex items-center gap-4 w-[30%]">
         {currentTrack ? (
-          <Link
-            to={`/albums/${currentTrack.albumId}`}
-            className={`relative group transition-transform duration-300 ${
-              isChangingTrack ? "scale-90 opacity-50" : "scale-100 opacity-100"
-            }`}
-          >
-            <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
-            <img
-              src={api.getTrackCoverUrl(currentTrack)}
-              alt={currentTrack.title}
-              className="relative w-14 h-14 rounded-lg shadow-lg transform group-hover:scale-105 transition-transform duration-300"
-            />
-            {isLoading && (
-              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          <>
+            <Link
+              to={`/albums/${currentTrack.albumId}`}
+              className={`relative group transition-transform duration-300 ${
+                isChangingTrack
+                  ? "scale-90 opacity-50"
+                  : "scale-100 opacity-100"
+              }`}
+            >
+              <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
+              <img
+                src={api.getTrackCoverUrl(currentTrack)}
+                alt={currentTrack.title}
+                className="relative w-14 h-14 rounded-lg shadow-lg transform group-hover:scale-105 transition-transform duration-300"
+              />
+              {isLoading && (
+                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                </div>
+              )}
+            </Link>
+            <div
+              className={`min-w-0 transition-opacity duration-300 ${
+                isChangingTrack ? "opacity-0" : "opacity-100"
+              }`}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">
+                  {currentTrack.title}
+                </p>
+                <Link
+                  to={`/artists/${currentTrack.artistId}`}
+                  className="text-sm text-white/60 truncate hover:text-white transition-colors"
+                >
+                  {currentTrack.artist}
+                </Link>
               </div>
-            )}
-          </Link>
+            </div>
+          </>
         ) : (
           <div className="w-14 h-14 rounded-lg bg-white/10" />
         )}
-        <div
-          className={`min-w-0 transition-opacity duration-300 ${
-            isChangingTrack ? "opacity-0" : "opacity-100"
-          }`}
-        >
-          <p className="text-white text-sm font-medium truncate">
-            {currentTrack?.title || "No track selected"}
-          </p>
-          <p className="text-white/60 text-sm truncate">
-            {currentTrack?.artist || ""}
-          </p>
-        </div>
         <div className="flex items-center gap-2">
           <ThumbsUp
             className={`w-5 h-5 cursor-pointer transition-all duration-300 hover:scale-110 ${

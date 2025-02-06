@@ -26,6 +26,10 @@ import {
   deletePlaylistHandler,
   updatePlaylistOrderHandler,
   advancedSearchHandler,
+  getAllArtistsHandler,
+  getArtistByIdHandler,
+  createOrUpdateArtistHandler,
+  streamArtistImageHandler,
 } from "./controllers/track.controller.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { permissionMiddleware } from "./middleware/permission.js";
@@ -82,6 +86,23 @@ app.post(
   authMiddleware,
   permissionMiddleware("index"),
   indexDirectoryHandler
+);
+
+// Artist routes
+app.get("/artists", getAllArtistsHandler);
+app.get("/artists/:artistId", optionalAuthMiddleware, getArtistByIdHandler);
+app.get("/artists/:artistId/image", streamArtistImageHandler);
+app.post(
+  "/artists",
+  authMiddleware,
+  permissionMiddleware("modify_artists"),
+  createOrUpdateArtistHandler
+);
+app.put(
+  "/artists/:artistId",
+  authMiddleware,
+  permissionMiddleware("modify_artists"),
+  createOrUpdateArtistHandler
 );
 
 // Playlist routes

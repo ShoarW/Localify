@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { AlbumWithTracks, Track, api } from "../../services/api";
-import { ContentView } from "./content-view";
 import { Play } from "lucide-react";
 import { TrackItem } from "./track-item";
+import { Link } from "react-router-dom";
 
 interface AlbumPageProps {
   currentTrackId: number | null;
@@ -36,6 +36,24 @@ export const AlbumPage = ({
 
     fetchAlbum();
   }, [id]);
+
+  // Handle reaction updates
+  const handleReactionUpdate = (
+    trackId: number,
+    newReaction: "like" | "dislike" | null
+  ) => {
+    if (!albumData) return;
+
+    setAlbumData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tracks: prev.tracks.map((track) =>
+          track.id === trackId ? { ...track, reaction: newReaction } : track
+        ),
+      };
+    });
+  };
 
   if (isLoading) {
     return (
@@ -98,9 +116,12 @@ export const AlbumPage = ({
                   alt={album.artist}
                   className="w-6 h-6 rounded-full shrink-0"
                 />
-                <span className="text-white font-medium truncate">
+                <Link
+                  to={`/artists/${album.artistId}`}
+                  className="text-white font-medium truncate hover:text-white/80 transition-colors"
+                >
                   {album.artist}
-                </span>
+                </Link>
                 <span className="shrink-0">• {tracks.length} songs</span>
               </div>
             </div>
@@ -121,6 +142,7 @@ export const AlbumPage = ({
               reaction={track.reaction}
               trackId={track.id}
               onClick={() => handleTrackClick(index)}
+              onReactionUpdate={handleReactionUpdate}
             />
           ))}
         </div>

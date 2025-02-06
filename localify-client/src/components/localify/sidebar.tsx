@@ -30,6 +30,18 @@ export const Sidebar = () => {
   const { openSearch } = useContext(SearchContext);
 
   useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.code === "Space") {
+        e.preventDefault(); // Prevent default browser behavior
+        openSearch();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [openSearch]);
+
+  useEffect(() => {
     const userData = getUser();
     if (userData) {
       setUser(userData);
@@ -71,9 +83,15 @@ export const Sidebar = () => {
 
         <div className="space-y-2 mb-8">
           <NavItem icon={<Home />} label="Home" to="/" />
-          <NavItem icon={<Search />} label="Search" onClick={openSearch} />
-          <NavItem icon={<Library />} label="Your Library" />
+          <NavItem
+            icon={<Search />}
+            label="Search"
+            onClick={openSearch}
+            shortcut="⌃ Space"
+          />
+          {/* <NavItem icon={<Library />} label="Your Library" /> */}
           <NavItem icon={<Disc />} label="Albums" to="/albums" />
+          <NavItem icon={<User />} label="Artists" to="/artists" />
         </div>
 
         <div className="space-y-2">

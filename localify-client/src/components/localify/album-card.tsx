@@ -1,13 +1,20 @@
 import { Album } from "../../services/api";
 import { api } from "../../services/api";
 import { Link } from "react-router-dom";
-import { Music } from "lucide-react";
+import { Music, Play } from "lucide-react";
 
 interface AlbumCardProps {
   album: Album;
+  onPlay?: () => void;
 }
 
-export const AlbumCard = ({ album }: AlbumCardProps) => {
+export const AlbumCard = ({ album, onPlay }: AlbumCardProps) => {
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onPlay?.();
+  };
+
   return (
     <Link
       to={`/albums/${album.id}`}
@@ -26,6 +33,14 @@ export const AlbumCard = ({ album }: AlbumCardProps) => {
           <div className="w-full h-full rounded-lg bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
             <Music className="w-12 h-12 text-white/40" />
           </div>
+        )}
+        {onPlay && (
+          <button
+            onClick={handlePlayClick}
+            className="absolute right-2 bottom-2 w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transform translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 shadow-xl"
+          >
+            <Play className="w-5 h-5 text-white" fill="white" />
+          </button>
         )}
       </div>
       <div className="flex flex-col gap-1">

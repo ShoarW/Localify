@@ -181,6 +181,7 @@
 ```typescript
 {
   artists: {
+    id: number;
     name: string;
     trackCount: number;
   }[];
@@ -376,6 +377,104 @@
 ```typescript
 {
   success: true;
+}
+```
+
+## Artists
+
+### Get All Artists
+- **URL**: `/artists`
+- **Method**: `GET`
+- **Auth Required**: No
+- **Response**:
+```typescript
+{
+  id: number;
+  name: string;
+  description: string | null;
+  imagePath: string | null;
+  trackCount: number;
+  albumCount: number;
+}[]
+```
+
+### Get Artist by ID
+- **URL**: `/artists/:artistId`
+- **Method**: `GET`
+- **Auth Required**: Optional (reactions only shown for authenticated users)
+- **Response**:
+```typescript
+{
+  artist: {
+    id: number;
+    name: string;
+    description: string | null;
+    imagePath: string | null;
+    createdAt: string;
+    updatedAt: string | null;
+  };
+  randomTracks: {
+    id: number;
+    title: string;
+    artist: string;
+    albumId: number | null;
+    duration: number;
+    reaction: "like" | "dislike" | null;
+  }[];
+  albums: {
+    id: number;
+    title: string;
+    year: number | null;
+    coverPath: string | null;
+    trackCount: number;
+    createdAt: string;
+    updatedAt: string | null;
+  }[];
+  singles: {
+    id: number;
+    title: string;
+    duration: number;
+    reaction: "like" | "dislike" | null;
+  }[];
+}
+```
+
+### Create Artist
+- **URL**: `/artists`
+- **Method**: `POST`
+- **Auth Required**: Yes (admin only)
+- **Request Body**:
+```typescript
+{
+  name: string;
+  description?: string | null;
+  imagePath?: string | null;
+}
+```
+- **Response** (201 Created):
+```typescript
+{
+  id: number;
+}
+```
+
+### Update Artist
+- **URL**: `/artists/:artistId`
+- **Method**: `PUT`
+- **Auth Required**: Yes (admin only)
+- **Request Body**:
+```typescript
+{
+  id: number;
+  name: string;
+  description?: string | null;
+  imagePath?: string | null;
+}
+```
+- **Response**:
+```typescript
+{
+  id: number;
 }
 ```
 

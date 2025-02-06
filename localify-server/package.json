@@ -10,7 +10,8 @@
     "dotenv": "^16.4.7",
     "hono": "^4.6.20",
     "mime-types": "^2.1.35",
-    "music-metadata": "^10.8.3"
+    "music-metadata": "^10.8.3",
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

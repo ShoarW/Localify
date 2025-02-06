@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { Album, api } from "../../services/api";
 import { AlbumCard } from "./album-card";
 
-export const AlbumsPage = () => {
+interface AlbumsPageProps {
+  onPlayAlbum?: (albumId: number) => void;
+}
+
+export const AlbumsPage = ({ onPlayAlbum }: AlbumsPageProps) => {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,7 +38,11 @@ export const AlbumsPage = () => {
       <h1 className="text-3xl font-bold text-white mb-8">Albums</h1>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
         {albums.map((album) => (
-          <AlbumCard key={album.id} album={album} />
+          <AlbumCard
+            key={album.id}
+            album={album}
+            onPlay={onPlayAlbum ? () => onPlayAlbum(album.id) : undefined}
+          />
         ))}
       </div>
     </div>
