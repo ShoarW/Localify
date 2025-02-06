@@ -2,29 +2,39 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 
 interface NavItemProps {
-  icon: React.ReactNode;
+  icon: React.ReactElement;
   label: string;
   to?: string;
   isActive?: boolean;
+  onClick?: () => void;
 }
 
-export const NavItem = ({ icon, label, to, isActive }: NavItemProps) => {
+export const NavItem = ({
+  icon,
+  label,
+  to,
+  isActive,
+  onClick,
+}: NavItemProps) => {
   const location = useLocation();
-  const isCurrentPath = to && location.pathname === to;
+  const isCurrentPath =
+    to &&
+    (location.pathname === to ||
+      (to === "/albums" && location.pathname.startsWith("/albums/")));
   const isActiveState = isActive || isCurrentPath;
 
   const className = `
-    flex items-center gap-4 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300
+    w-full flex items-center gap-4 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 border border-transparent
     ${
       isActiveState
-        ? "text-white bg-gradient-to-r from-white/15 to-white/5 backdrop-blur-lg shadow-xl border border-white/10"
+        ? "text-white bg-gradient-to-r from-white/15 to-white/5 backdrop-blur-lg shadow-xl !border-white/10"
         : "text-white/70 hover:text-white hover:bg-white/5"
     }
   `;
 
   const content = (
     <>
-      {React.cloneElement(icon as React.ReactElement, { size: 20 })}
+      <div className="w-5 h-5">{icon}</div>
       <span className="font-medium tracking-wide">{label}</span>
     </>
   );
@@ -37,5 +47,9 @@ export const NavItem = ({ icon, label, to, isActive }: NavItemProps) => {
     );
   }
 
-  return <div className={className}>{content}</div>;
+  return (
+    <button onClick={onClick} className={className}>
+      {content}
+    </button>
+  );
 };

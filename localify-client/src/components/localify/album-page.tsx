@@ -63,7 +63,7 @@ export const AlbumPage = ({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto hide-scrollbar backdrop-blur-xl bg-gradient-to-b from-black/50 to-black/30">
+    <div className="flex-1 h-full overflow-y-auto hide-scrollbar backdrop-blur-xl bg-gradient-to-b from-black/50 to-black/30">
       <div className="p-8">
         {/* Album Header */}
         <div className="flex flex-col md:flex-row md:items-end gap-6 mb-8">

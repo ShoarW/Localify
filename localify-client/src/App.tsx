@@ -19,6 +19,17 @@ import { LikedMusicPage } from "./pages/liked-music";
 import { PlaylistsPage } from "./pages/playlists";
 import { PlaylistPage } from "./pages/playlist";
 import { api, Track } from "./services/api";
+import { SearchModal } from "./components/localify/search-modal";
+import React from "react";
+
+// Create a context for the search modal
+export const SearchContext = React.createContext<{
+  openSearch: () => void;
+  closeSearch: () => void;
+}>({
+  openSearch: () => {},
+  closeSearch: () => {},
+});
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -40,6 +51,7 @@ const AppLayout = () => {
   const [currentPlaylist, setCurrentPlaylist] = useState<Track[]>([]);
   const [currentTrackId, setCurrentTrackId] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Find the current track and its index in the current playlist
   const currentTrackIndex = currentPlaylist.findIndex(
@@ -60,71 +72,86 @@ const AppLayout = () => {
   };
 
   return (
-    <div className="relative h-screen bg-black flex flex-col min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black">
-      <div
-        className="relative flex flex-1 overflow-hidden"
-        style={{ fontFamily: "'Josefin Sans', sans-serif" }}
-      >
-        <Sidebar />
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <MainContent
-                tracks={allTracks}
-                currentTrackIndex={currentTrackIndex}
-                isPlaying={isPlaying}
-                onTrackSelect={(index: number) => {
-                  setCurrentPlaylist(allTracks);
-                  setCurrentTrackId(allTracks[index].id);
-                  setIsPlaying(true);
-                }}
-              />
-            }
-          />
-          <Route path="/albums" element={<AlbumsPage />} />
-          <Route
-            path="/albums/:id"
-            element={
-              <AlbumPage
-                currentTrackId={currentTrackId}
-                isPlaying={isPlaying}
-                onPlayAlbum={handlePlayTrack}
-              />
-            }
-          />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route
-            path="/liked-music"
-            element={
-              <LikedMusicPage
-                currentTrackId={currentTrackId}
-                isPlaying={isPlaying}
-                onPlayTrack={handlePlayTrack}
-              />
-            }
-          />
-          <Route path="/playlists" element={<PlaylistsPage />} />
-          <Route
-            path="/playlists/:id"
-            element={
-              <PlaylistPage
-                currentTrackId={currentTrackId}
-                isPlaying={isPlaying}
-                onPlayTrack={handlePlayTrack}
-              />
-            }
-          />
-        </Routes>
+    <SearchContext.Provider
+      value={{
+        openSearch: () => setIsSearchOpen(true),
+        closeSearch: () => setIsSearchOpen(false),
+      }}
+    >
+      <div className="relative h-screen bg-black flex flex-col min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black">
+        <div
+          className="relative flex flex-1 overflow-hidden"
+          style={{ fontFamily: "'Josefin Sans', sans-serif" }}
+        >
+          <Sidebar />
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <MainContent
+                  tracks={allTracks}
+                  currentTrackIndex={currentTrackIndex}
+                  isPlaying={isPlaying}
+                  onTrackSelect={(index: number) => {
+                    setCurrentPlaylist(allTracks);
+                    setCurrentTrackId(allTracks[index].id);
+                    setIsPlaying(true);
+                  }}
+                />
+              }
+            />
+            <Route path="/albums" element={<AlbumsPage />} />
+            <Route
+              path="/albums/:id"
+              element={
+                <AlbumPage
+                  currentTrackId={currentTrackId}
+                  isPlaying={isPlaying}
+                  onPlayAlbum={handlePlayTrack}
+                />
+              }
+            />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route
+              path="/liked-music"
+              element={
+                <LikedMusicPage
+                  currentTrackId={currentTrackId}
+                  isPlaying={isPlaying}
+                  onPlayTrack={handlePlayTrack}
+                />
+              }
+            />
+            <Route path="/playlists" element={<PlaylistsPage />} />
+            <Route
+              path="/playlists/:id"
+              element={
+                <PlaylistPage
+                  currentTrackId={currentTrackId}
+                  isPlaying={isPlaying}
+                  onPlayTrack={handlePlayTrack}
+                />
+              }
+            />
+          </Routes>
+        </div>
+        <MusicPlayer
+          playlist={currentPlaylist}
+          currentTrackIndex={currentTrackIndex === -1 ? 0 : currentTrackIndex}
+          setCurrentTrackIndex={handleTrackChange}
+          isPlaying={isPlaying}
+          setIsPlaying={setIsPlaying}
+        />
+
+        <SearchModal
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+          onPlayTrack={(track) => {
+            handlePlayTrack([track], 0);
+          }}
+        />
       </div>
-      <MusicPlayer
-        playlist={currentPlaylist}
-        currentTrackIndex={currentTrackIndex === -1 ? 0 : currentTrackIndex}
-        setCurrentTrackIndex={handleTrackChange}
-        isPlaying={isPlaying}
-        setIsPlaying={setIsPlaying}
-      />
-    </div>
+    </SearchContext.Provider>
   );
 };
 

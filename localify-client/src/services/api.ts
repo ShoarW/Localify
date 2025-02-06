@@ -87,6 +87,31 @@ export interface TrackOrder {
   position: number;
 }
 
+export interface SearchResults {
+  artists: {
+    name: string;
+    trackCount: number;
+  }[];
+  albums: {
+    id: number;
+    title: string;
+    artist: string | null;
+    year: number | null;
+    coverPath: string | null;
+    trackCount: number;
+    createdAt: string;
+    updatedAt: string | null;
+  }[];
+  tracks: {
+    id: number;
+    title: string;
+    artist: string;
+    albumId: number;
+    duration: number;
+    reaction: "like" | "dislike" | null;
+  }[];
+}
+
 const API_BASE_URL = "http://localhost:3000";
 
 export const api = {
@@ -390,6 +415,24 @@ export const api = {
       }
     );
     if (!response.ok) throw new Error("Failed to update track order");
+    return response.json();
+  },
+
+  // Search endpoints
+  advancedSearch: async (
+    query: string,
+    limit: number = 5
+  ): Promise<SearchResults> => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${API_BASE_URL}/search/advanced?q=${encodeURIComponent(
+        query
+      )}&limit=${limit}`,
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      }
+    );
+    if (!response.ok) throw new Error("Search failed");
     return response.json();
   },
 };

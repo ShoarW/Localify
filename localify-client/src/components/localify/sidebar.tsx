@@ -12,9 +12,10 @@ import {
 } from "lucide-react";
 import { NavItem } from "./nav-item";
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { getUser } from "../../utils/auth";
 import { Playlist, api } from "../../services/api";
+import { SearchContext } from "../../App";
 
 interface UserData {
   id: number;
@@ -26,6 +27,7 @@ export const Sidebar = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserData | null>(null);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const { openSearch } = useContext(SearchContext);
 
   useEffect(() => {
     const userData = getUser();
@@ -69,7 +71,7 @@ export const Sidebar = () => {
 
         <div className="space-y-2 mb-8">
           <NavItem icon={<Home />} label="Home" to="/" />
-          <NavItem icon={<Search />} label="Search" />
+          <NavItem icon={<Search />} label="Search" onClick={openSearch} />
           <NavItem icon={<Library />} label="Your Library" />
           <NavItem icon={<Disc />} label="Albums" to="/albums" />
         </div>
@@ -82,13 +84,11 @@ export const Sidebar = () => {
             <PlusCircle size={20} />
             <span className="font-medium">Create Playlist</span>
           </Link>
-          <Link
+          <NavItem
+            icon={<Heart className="text-red-500 fill-red-500" />}
+            label="Liked Songs"
             to="/liked-music"
-            className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-white/15 to-white/5 backdrop-blur-xl border border-white/10 flex items-center gap-2 hover:from-white/20 hover:to-white/10 transition-all duration-300"
-          >
-            <Heart size={20} className="text-red-500 fill-red-500" />
-            <span className="font-medium text-white">Liked Songs</span>
-          </Link>
+          />
         </div>
       </div>
 
