@@ -4,7 +4,7 @@ export interface Track {
   filename: string;
   title: string | null;
   artist: string | null;
-  album: string | null;
+  albumId: number | null;
   genre: string | null;
   year: number | null;
   duration: number | null;
@@ -56,4 +56,14 @@ export interface Like {
   userId: number;
   trackId: number;
   timestamp: Date;
+}
+
+export interface Album {
+  id?: number;
+  title: string;
+  artist: string | null;
+  year: number | null;
+  coverPath: string | null;
+  createdAt: number;
+  updatedAt: number | null;
 }

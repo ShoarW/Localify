@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api, Track } from "../../services/api";
+import { Link } from "react-router-dom";
 
 // Add these props to the MusicPlayer component
 interface MusicPlayerProps {
@@ -56,10 +57,49 @@ export const MusicPlayer = ({
   // Add new state for dislike
   const [isDisliked, setIsDisliked] = useState(false);
 
-  // Add new state for tracking current byte position
-  const [currentByte, setCurrentByte] = useState(0);
-
   const currentTrack = playlist[currentTrackIndex];
+
+  // Playback controls with loading states
+  const togglePlay = async () => {
+    if (isLoading) return;
+
+    try {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        await audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    } catch (error) {
+      console.error("Playback error:", error);
+    }
+  };
+
+  const handleNext = () => {
+    if (isLoading || playlist.length === 0) return;
+
+    let nextIndex: number;
+    if (isShuffle) {
+      do {
+        nextIndex = Math.floor(Math.random() * playlist.length);
+      } while (nextIndex === currentTrackIndex && playlist.length > 1);
+    } else {
+      nextIndex = (currentTrackIndex + 1) % playlist.length;
+    }
+    setCurrentTrackIndex(nextIndex);
+  };
+
+  const handlePrevious = () => {
+    if (isLoading || playlist.length === 0) return;
+
+    if (audioRef.current.currentTime > 3) {
+      audioRef.current.currentTime = 0;
+    } else {
+      const prevIndex =
+        currentTrackIndex === 0 ? playlist.length - 1 : currentTrackIndex - 1;
+      setCurrentTrackIndex(prevIndex);
+    }
+  };
 
   // Handle track changes
   useEffect(() => {
@@ -70,39 +110,8 @@ export const MusicPlayer = ({
       setIsChangingTrack(true);
 
       try {
-        // Reset byte position for new track
-        setCurrentByte(0);
         audioRef.current.src = api.getTrackStreamUrl(currentTrack.id);
         await audioRef.current.load();
-
-        // Add progress event listener to handle chunked loading
-        audioRef.current.addEventListener("progress", async () => {
-          const buffered = audioRef.current.buffered;
-          if (buffered.length > 0) {
-            const bufferedEnd = buffered.end(buffered.length - 1);
-            const duration = audioRef.current.duration;
-
-            // If we're close to the end of the buffer, load next chunk
-            if (duration - bufferedEnd < 10) {
-              try {
-                const response = await api.streamTrack(
-                  currentTrack.id,
-                  currentByte
-                );
-                const contentRange = response.headers.get("Content-Range");
-                if (contentRange) {
-                  const [, totalSize] = contentRange.split("/");
-                  const nextByte = currentByte + 1 * 1024 * 1024;
-                  if (nextByte < parseInt(totalSize)) {
-                    setCurrentByte(nextByte);
-                  }
-                }
-              } catch (error) {
-                console.error("Error loading next chunk:", error);
-              }
-            }
-          }
-        });
 
         // Set media session metadata
         if ("mediaSession" in navigator) {
@@ -112,7 +121,7 @@ export const MusicPlayer = ({
             album: currentTrack.album,
             artwork: [
               {
-                src: currentTrack.cover || "/api/placeholder/56/56",
+                src: api.getTrackCoverUrl(currentTrack),
                 sizes: "56x56",
                 type: "image/png",
               },
@@ -133,7 +142,6 @@ export const MusicPlayer = ({
           try {
             await audioRef.current.play();
           } catch (error) {
-            console.log("Autoplay prevented:", error);
             setIsPlaying(false);
           }
         }
@@ -154,7 +162,22 @@ export const MusicPlayer = ({
 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
     const handleLoadedMetadata = () => setDuration(audio.duration);
-    const handleEnded = () => handleTrackEnd();
+    const handleEnded = () => {
+      if (repeatMode === 2) {
+        // Single track repeat
+        audio.currentTime = 0;
+        audio.play();
+      } else if (currentTrackIndex < playlist.length - 1) {
+        // Not the last track, go to next
+        handleNext();
+      } else if (repeatMode === 1) {
+        // Last track but playlist repeat is on
+        setCurrentTrackIndex(0);
+      } else {
+        // Last track and no repeat
+        setIsPlaying(false);
+      }
+    };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -165,65 +188,10 @@ export const MusicPlayer = ({
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, []);
-
-  // Track end handling
-  const handleTrackEnd = () => {
-    if (repeatMode === 2) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play();
-    } else if (repeatMode === 1 || currentTrackIndex < playlist.length - 1) {
-      handleNext();
-    } else {
-      setIsPlaying(false);
-    }
-  };
-
-  // Playback controls with loading states
-  const togglePlay = async () => {
-    if (isLoading) return;
-
-    try {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        await audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    } catch (error) {
-      console.error("Playback error:", error);
-    }
-  };
-
-  const handleNext = () => {
-    if (isLoading) return;
-
-    setCurrentTrackIndex((prev) => {
-      if (isShuffle) {
-        let newIndex;
-        do {
-          newIndex = Math.floor(Math.random() * playlist.length);
-        } while (newIndex === prev && playlist.length > 1);
-        return newIndex;
-      }
-      return (prev + 1) % playlist.length;
-    });
-  };
-
-  const handlePrevious = () => {
-    if (isLoading) return;
-
-    if (audioRef.current.currentTime > 3) {
-      audioRef.current.currentTime = 0;
-    } else {
-      setCurrentTrackIndex((prev) =>
-        prev === 0 ? playlist.length - 1 : prev - 1
-      );
-    }
-  };
+  }, [currentTrackIndex, playlist.length, repeatMode, handleNext]);
 
   // Time formatting
-  const formatTime = (time) => {
+  const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
@@ -301,23 +269,28 @@ export const MusicPlayer = ({
     <div className="h-24 bg-black/30 backdrop-blur-xl border-t border-white/10 flex items-center px-4 relative">
       {/* Track Info Section */}
       <div className="flex items-center gap-4 w-[30%]">
-        <div
-          className={`relative group transition-transform duration-300 ${
-            isChangingTrack ? "scale-90 opacity-50" : "scale-100 opacity-100"
-          }`}
-        >
-          <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
-          <img
-            src={currentTrack?.cover || "https://iili.io/HlHy9Yx.png"}
-            alt={currentTrack?.title || "No track selected"}
-            className="relative w-14 h-14 rounded-lg shadow-lg"
-          />
-          {isLoading && (
-            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-            </div>
-          )}
-        </div>
+        {currentTrack ? (
+          <Link
+            to={`/albums/${currentTrack.albumId}`}
+            className={`relative group transition-transform duration-300 ${
+              isChangingTrack ? "scale-90 opacity-50" : "scale-100 opacity-100"
+            }`}
+          >
+            <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
+            <img
+              src={api.getTrackCoverUrl(currentTrack)}
+              alt={currentTrack.title}
+              className="relative w-14 h-14 rounded-lg shadow-lg transform group-hover:scale-105 transition-transform duration-300"
+            />
+            {isLoading && (
+              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              </div>
+            )}
+          </Link>
+        ) : (
+          <div className="w-14 h-14 rounded-lg bg-white/10" />
+        )}
         <div
           className={`min-w-0 transition-opacity duration-300 ${
             isChangingTrack ? "opacity-0" : "opacity-100"

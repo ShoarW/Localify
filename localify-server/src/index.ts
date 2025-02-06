@@ -11,6 +11,12 @@ import {
   searchTracksHandler,
   indexDirectoryHandler,
   streamTrackHandler,
+  getAllAlbumsHandler,
+  getAlbumWithTracksHandler,
+  streamAlbumCoverHandler,
+  setReactionHandler,
+  getReactionHandler,
+  getReactedTracksHandler,
 } from "./controllers/track.controller.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { permissionMiddleware } from "./middleware/permission.js";
@@ -39,6 +45,16 @@ app.delete(
 );
 app.get("/tracks/:id/stream", streamTrackHandler);
 app.get("/search", searchTracksHandler);
+
+// -- Reactions -- //
+app.post("/tracks/:id/reaction", authMiddleware, setReactionHandler);
+app.get("/tracks/:id/reaction", authMiddleware, getReactionHandler);
+app.get("/reactions", authMiddleware, getReactedTracksHandler);
+
+// -- Albums -- //
+app.get("/albums", getAllAlbumsHandler);
+app.get("/albums/:id", getAlbumWithTracksHandler);
+app.get("/albums/:id/cover", streamAlbumCoverHandler);
 
 // -- Indexing -- //
 app.post(
