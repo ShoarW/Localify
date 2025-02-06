@@ -11,6 +11,14 @@ import {
   setReaction,
   getReactedTracks,
   getReaction,
+  createPlaylist,
+  addTrackToPlaylist,
+  removeTrackFromPlaylist,
+  getPlaylistById,
+  getUserPlaylists,
+  deletePlaylist,
+  updatePlaylistOrder,
+  advancedSearch,
 } from "../services/track.service.js";
 import { config } from "../config.js";
 import fs from "fs";
@@ -386,5 +394,168 @@ export async function getReactedTracksHandler(c: Context) {
   } catch (error) {
     console.error("Error getting reacted tracks:", error);
     return c.json({ error: "Failed to get reacted tracks" }, 500);
+  }
+}
+
+// Playlist-related handlers
+export async function createPlaylistHandler(c: Context) {
+  const userId = c.get("userId");
+  const { name, description } = await c.req.json();
+
+  if (!name || typeof name !== "string") {
+    return c.json({ error: "Invalid playlist name" }, 400);
+  }
+
+  try {
+    const playlistId = await createPlaylist(userId, name, description || null);
+    return c.json({ id: playlistId }, 201);
+  } catch (error) {
+    console.error("Error creating playlist:", error);
+    return c.json({ error: "Failed to create playlist" }, 500);
+  }
+}
+
+export async function addTrackToPlaylistHandler(c: Context) {
+  const userId = c.get("userId");
+  const playlistId = parseInt(c.req.param("playlistId"));
+  const { trackId } = await c.req.json();
+
+  if (!trackId || typeof trackId !== "number") {
+    return c.json({ error: "Invalid track ID" }, 400);
+  }
+
+  try {
+    await addTrackToPlaylist(userId, playlistId, trackId);
+    return c.json({ success: true });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Not authorized to modify this playlist"
+    ) {
+      return c.json({ error: error.message }, 403);
+    }
+    console.error("Error adding track to playlist:", error);
+    return c.json({ error: "Failed to add track to playlist" }, 500);
+  }
+}
+
+export async function removeTrackFromPlaylistHandler(c: Context) {
+  const userId = c.get("userId");
+  const playlistId = parseInt(c.req.param("playlistId"));
+  const trackId = parseInt(c.req.param("trackId"));
+
+  try {
+    const success = await removeTrackFromPlaylist(userId, playlistId, trackId);
+    if (!success) {
+      return c.json({ error: "Track not found in playlist" }, 404);
+    }
+    return c.json({ success: true });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Not authorized to modify this playlist"
+    ) {
+      return c.json({ error: error.message }, 403);
+    }
+    console.error("Error removing track from playlist:", error);
+    return c.json({ error: "Failed to remove track from playlist" }, 500);
+  }
+}
+
+export async function getPlaylistByIdHandler(c: Context) {
+  const playlistId = parseInt(c.req.param("playlistId"));
+  const userId = c.get("userId") as number | null;
+
+  try {
+    const playlist = await getPlaylistById(playlistId, userId);
+    if (!playlist) {
+      return c.json({ error: "Playlist not found" }, 404);
+    }
+    return c.json(playlist);
+  } catch (error) {
+    console.error("Error getting playlist:", error);
+    return c.json({ error: "Failed to get playlist" }, 500);
+  }
+}
+
+export async function getUserPlaylistsHandler(c: Context) {
+  const userId = c.get("userId");
+
+  try {
+    const playlists = await getUserPlaylists(userId);
+    return c.json(playlists);
+  } catch (error) {
+    console.error("Error getting user playlists:", error);
+    return c.json({ error: "Failed to get playlists" }, 500);
+  }
+}
+
+export async function deletePlaylistHandler(c: Context) {
+  const userId = c.get("userId");
+  const playlistId = parseInt(c.req.param("playlistId"));
+
+  try {
+    const success = await deletePlaylist(userId, playlistId);
+    if (!success) {
+      return c.json({ error: "Playlist not found or not authorized" }, 404);
+    }
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting playlist:", error);
+    return c.json({ error: "Failed to delete playlist" }, 500);
+  }
+}
+
+export async function updatePlaylistOrderHandler(c: Context) {
+  const userId = c.get("userId");
+  const playlistId = parseInt(c.req.param("playlistId"));
+  const { trackOrders } = await c.req.json();
+
+  if (
+    !Array.isArray(trackOrders) ||
+    !trackOrders.every(
+      (order) =>
+        typeof order === "object" &&
+        typeof order.trackId === "number" &&
+        typeof order.position === "number"
+    )
+  ) {
+    return c.json({ error: "Invalid track orders format" }, 400);
+  }
+
+  try {
+    await updatePlaylistOrder(userId, playlistId, trackOrders);
+    return c.json({ success: true });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Not authorized to modify this playlist"
+    ) {
+      return c.json({ error: error.message }, 403);
+    }
+    console.error("Error updating playlist order:", error);
+    return c.json({ error: "Failed to update playlist order" }, 500);
+  }
+}
+
+export async function advancedSearchHandler(c: Context) {
+  const query = c.req.query("q");
+  if (!query) {
+    return c.json({ error: 'Missing search query parameter "q".' }, 400);
+  }
+
+  const limit = parseInt(c.req.query("limit") || "5");
+  if (isNaN(limit) || limit < 1 || limit > 20) {
+    return c.json({ error: "Invalid limit (must be between 1 and 20)" }, 400);
+  }
+
+  const userId = c.get("userId") || null;
+
+  try {
+    const results = await advancedSearch(query, userId, limit);
+    return c.json(results);
+  } catch (error) {
+    console.error("Error performing advanced search:", error);
+    return c.json({ error: "Failed to perform search" }, 500);
   }
 }

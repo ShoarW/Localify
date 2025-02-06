@@ -8,11 +8,13 @@ import {
   Disc,
   LogOut,
   User,
+  ListMusic,
 } from "lucide-react";
 import { NavItem } from "./nav-item";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getUser } from "../../utils/auth";
+import { Playlist, api } from "../../services/api";
 
 interface UserData {
   id: number;
@@ -23,6 +25,7 @@ interface UserData {
 export const Sidebar = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserData | null>(null);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
 
   useEffect(() => {
     const userData = getUser();
@@ -30,6 +33,21 @@ export const Sidebar = () => {
       setUser(userData);
     }
   }, []);
+
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      try {
+        const data = await api.getPlaylists();
+        setPlaylists(data);
+      } catch (error) {
+        console.error("Failed to fetch playlists:", error);
+      }
+    };
+
+    if (user) {
+      fetchPlaylists();
+    }
+  }, [user]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -57,10 +75,13 @@ export const Sidebar = () => {
         </div>
 
         <div className="space-y-2">
-          <button className="w-full px-4 py-3 rounded-xl transition-all duration-300 text-white/70 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/5 flex items-center gap-2">
+          <Link
+            to="/playlists"
+            className="w-full px-4 py-3 rounded-xl transition-all duration-300 text-white/70 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/5 flex items-center gap-2"
+          >
             <PlusCircle size={20} />
             <span className="font-medium">Create Playlist</span>
-          </button>
+          </Link>
           <Link
             to="/liked-music"
             className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-white/15 to-white/5 backdrop-blur-xl border border-white/10 flex items-center gap-2 hover:from-white/20 hover:to-white/10 transition-all duration-300"
@@ -74,15 +95,17 @@ export const Sidebar = () => {
       <div className="flex-1 overflow-y-auto hide-scrollbar px-2">
         <div className="space-y-1 p-4">
           <p className="text-white/40 text-sm px-4 mb-4">PLAYLISTS</p>
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div
-              key={i}
-              className="px-4 py-2 rounded-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-white/15 hover:to-white/5 cursor-pointer"
+          {playlists.map((playlist) => (
+            <Link
+              key={playlist.id}
+              to={`/playlists/${playlist.id}`}
+              className="px-4 py-2 rounded-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-white/15 hover:to-white/5 flex items-center gap-2 group"
             >
-              <p className="text-white/70 hover:text-white text-sm">
-                My Playlist #{i + 1}
+              <ListMusic className="w-4 h-4 text-white/40 group-hover:text-white/60" />
+              <p className="text-white/70 group-hover:text-white text-sm truncate">
+                {playlist.name}
               </p>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

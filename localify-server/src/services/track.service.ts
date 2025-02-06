@@ -23,8 +23,17 @@ import {
   searchTracksWithReactions as dbSearchTracksWithReactions,
   getTracksByAlbumIdWithReactions as dbGetTracksByAlbumIdWithReactions,
   getAllAlbumsWithTracks as dbGetAllAlbumsWithTracks,
+  createPlaylist as dbCreatePlaylist,
+  addTrackToPlaylist as dbAddTrackToPlaylist,
+  removeTrackFromPlaylist as dbRemoveTrackFromPlaylist,
+  getPlaylistById as dbGetPlaylistById,
+  getUserPlaylists as dbGetUserPlaylists,
+  deletePlaylist as dbDeletePlaylist,
+  updatePlaylistOrder as dbUpdatePlaylistOrder,
+  isPlaylistOwner as dbIsPlaylistOwner,
+  advancedSearch as dbAdvancedSearch,
 } from "../db/track.db.js";
-import type { Track, Album } from "../types/model.js";
+import type { Track, Album, Playlist } from "../types/model.js";
 import mime from "mime-types";
 import type { Database } from "better-sqlite3";
 
@@ -369,4 +378,97 @@ export async function getReactedTracks(
     currentPage: page,
     totalPages,
   };
+}
+
+// Playlist-related functions
+export async function createPlaylist(
+  userId: number,
+  name: string,
+  description: string | null = null
+): Promise<number> {
+  return dbCreatePlaylist(db, userId, name, description);
+}
+
+export async function addTrackToPlaylist(
+  userId: number,
+  playlistId: number,
+  trackId: number
+): Promise<void> {
+  // Verify ownership
+  if (!dbIsPlaylistOwner(db, playlistId, userId)) {
+    throw new Error("Not authorized to modify this playlist");
+  }
+
+  // Get current max position
+  const playlist = await getPlaylistById(playlistId, userId);
+  const position = playlist ? playlist.tracks.length : 0;
+
+  dbAddTrackToPlaylist(db, playlistId, trackId, position);
+}
+
+export async function removeTrackFromPlaylist(
+  userId: number,
+  playlistId: number,
+  trackId: number
+): Promise<boolean> {
+  // Verify ownership
+  if (!dbIsPlaylistOwner(db, playlistId, userId)) {
+    throw new Error("Not authorized to modify this playlist");
+  }
+
+  return dbRemoveTrackFromPlaylist(db, playlistId, trackId);
+}
+
+export async function getPlaylistById(
+  playlistId: number,
+  userId: number | null
+): Promise<
+  | (Playlist & {
+      tracks: (Track & {
+        reaction: "like" | "dislike" | null;
+        position: number;
+      })[];
+      ownerName: string;
+    })
+  | undefined
+> {
+  return dbGetPlaylistById(db, playlistId, userId);
+}
+
+export async function getUserPlaylists(
+  userId: number
+): Promise<(Playlist & { trackCount: number })[]> {
+  return dbGetUserPlaylists(db, userId);
+}
+
+export async function deletePlaylist(
+  userId: number,
+  playlistId: number
+): Promise<boolean> {
+  return dbDeletePlaylist(db, playlistId, userId);
+}
+
+export async function updatePlaylistOrder(
+  userId: number,
+  playlistId: number,
+  trackOrders: { trackId: number; position: number }[]
+): Promise<void> {
+  // Verify ownership
+  if (!dbIsPlaylistOwner(db, playlistId, userId)) {
+    throw new Error("Not authorized to modify this playlist");
+  }
+
+  dbUpdatePlaylistOrder(db, playlistId, trackOrders);
+}
+
+export async function advancedSearch(
+  query: string,
+  userId: number | null = null,
+  limit: number = 5
+): Promise<{
+  artists: { name: string; trackCount: number }[];
+  albums: (Album & { artist: string | null; trackCount: number })[];
+  tracks: (Track & { reaction: "like" | "dislike" | null })[];
+}> {
+  return dbAdvancedSearch(db, query, userId, limit);
 }

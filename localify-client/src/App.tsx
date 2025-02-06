@@ -16,6 +16,8 @@ import { LoginPage } from "./pages/auth/login";
 import { RegisterPage } from "./pages/auth/register";
 import { ProfilePage } from "./pages/profile";
 import { LikedMusicPage } from "./pages/liked-music";
+import { PlaylistsPage } from "./pages/playlists";
+import { PlaylistPage } from "./pages/playlist";
 import { api, Track } from "./services/api";
 
 // Protected Route component
@@ -96,6 +98,17 @@ const AppLayout = () => {
             path="/liked-music"
             element={
               <LikedMusicPage
+                currentTrackId={currentTrackId}
+                isPlaying={isPlaying}
+                onPlayTrack={handlePlayTrack}
+              />
+            }
+          />
+          <Route path="/playlists" element={<PlaylistsPage />} />
+          <Route
+            path="/playlists/:id"
+            element={
+              <PlaylistPage
                 currentTrackId={currentTrackId}
                 isPlaying={isPlaying}
                 onPlayTrack={handlePlayTrack}

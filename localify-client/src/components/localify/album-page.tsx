@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { AlbumWithTracks, Track, api } from "../../services/api";
 import { ContentView } from "./content-view";
 import { Play } from "lucide-react";
+import { TrackItem } from "./track-item";
 
 interface AlbumPageProps {
   currentTrackId: number | null;
@@ -109,35 +110,18 @@ export const AlbumPage = ({
         {/* Track List */}
         <div className="space-y-1">
           {tracks.map((track, index) => (
-            <div
+            <TrackItem
               key={track.id}
-              className={`flex items-center gap-4 p-3 rounded-lg transition-all duration-300 group cursor-pointer ${
-                currentTrackIndex === index
-                  ? "bg-white/20"
-                  : "hover:bg-white/10"
-              }`}
+              number={index + 1}
+              title={track.title}
+              artist={track.artist}
+              duration={Math.floor(track.duration)}
+              isActive={currentTrackIndex === index}
+              isPlaying={currentTrackIndex === index && isPlaying}
+              reaction={track.reaction}
+              trackId={track.id}
               onClick={() => handleTrackClick(index)}
-            >
-              <div className="w-8 text-center text-sm text-white/40 group-hover:text-white/60">
-                {index + 1}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  className={`text-sm font-medium truncate ${
-                    currentTrackIndex === index
-                      ? "text-white"
-                      : "text-white/80 group-hover:text-white"
-                  }`}
-                >
-                  {track.title}
-                </p>
-                <p className="text-sm text-white/40 truncate">{track.artist}</p>
-              </div>
-              <div className="text-sm text-white/40">
-                {Math.floor(track.duration / 60)}:
-                {String(Math.floor(track.duration % 60)).padStart(2, "0")}
-              </div>
-            </div>
+            />
           ))}
         </div>
       </div>

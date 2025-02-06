@@ -18,6 +18,14 @@ import {
   setReactionHandler,
   getReactionHandler,
   getReactedTracksHandler,
+  createPlaylistHandler,
+  addTrackToPlaylistHandler,
+  removeTrackFromPlaylistHandler,
+  getPlaylistByIdHandler,
+  getUserPlaylistsHandler,
+  deletePlaylistHandler,
+  updatePlaylistOrderHandler,
+  advancedSearchHandler,
 } from "./controllers/track.controller.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { permissionMiddleware } from "./middleware/permission.js";
@@ -56,6 +64,7 @@ app.delete(
 );
 app.get("/tracks/:id/stream", streamTrackHandler);
 app.get("/search", searchTracksHandler);
+app.get("/search/advanced", optionalAuthMiddleware, advancedSearchHandler);
 
 // -- Reactions -- //
 app.post("/tracks/:id/reaction", authMiddleware, setReactionHandler);
@@ -73,6 +82,31 @@ app.post(
   authMiddleware,
   permissionMiddleware("index"),
   indexDirectoryHandler
+);
+
+// Playlist routes
+app.get("/playlists", authMiddleware, getUserPlaylistsHandler);
+app.post("/playlists", authMiddleware, createPlaylistHandler);
+app.get(
+  "/playlists/:playlistId",
+  optionalAuthMiddleware,
+  getPlaylistByIdHandler
+);
+app.delete("/playlists/:playlistId", authMiddleware, deletePlaylistHandler);
+app.post(
+  "/playlists/:playlistId/tracks",
+  authMiddleware,
+  addTrackToPlaylistHandler
+);
+app.delete(
+  "/playlists/:playlistId/tracks/:trackId",
+  authMiddleware,
+  removeTrackFromPlaylistHandler
+);
+app.put(
+  "/playlists/:playlistId/order",
+  authMiddleware,
+  updatePlaylistOrderHandler
 );
 
 app.get("/", (c) => {

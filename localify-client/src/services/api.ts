@@ -59,6 +59,34 @@ export interface PaginatedTracks {
   totalPages: number;
 }
 
+export interface Playlist {
+  id: number;
+  name: string;
+  description: string | null;
+  userId: number;
+  trackCount: number;
+  createdAt: string;
+}
+
+export interface PlaylistTrack extends Track {
+  position: number;
+}
+
+export interface PlaylistDetails {
+  id: number;
+  name: string;
+  description: string | null;
+  userId: number;
+  ownerName: string;
+  createdAt: string;
+  tracks: PlaylistTrack[];
+}
+
+export interface TrackOrder {
+  trackId: number;
+  position: number;
+}
+
 const API_BASE_URL = "http://localhost:3000";
 
 export const api = {
@@ -254,6 +282,114 @@ export const api = {
       throw new Error("Failed to fetch reactions");
     }
 
+    return response.json();
+  },
+
+  // Playlist endpoints
+  getPlaylists: async (): Promise<Playlist[]> => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/playlists`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error("Failed to fetch playlists");
+    return response.json();
+  },
+
+  createPlaylist: async (
+    name: string,
+    description?: string
+  ): Promise<{ id: number }> => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/playlists`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ name, description }),
+    });
+    if (!response.ok) throw new Error("Failed to create playlist");
+    return response.json();
+  },
+
+  getPlaylist: async (playlistId: number): Promise<PlaylistDetails> => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!response.ok) throw new Error("Failed to fetch playlist");
+    return response.json();
+  },
+
+  deletePlaylist: async (playlistId: number): Promise<{ success: boolean }> => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error("Failed to delete playlist");
+    return response.json();
+  },
+
+  addTrackToPlaylist: async (
+    playlistId: number,
+    trackId: number
+  ): Promise<{ success: boolean }> => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${API_BASE_URL}/playlists/${playlistId}/tracks`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ trackId }),
+      }
+    );
+    if (!response.ok) throw new Error("Failed to add track to playlist");
+    return response.json();
+  },
+
+  removeTrackFromPlaylist: async (
+    playlistId: number,
+    trackId: number
+  ): Promise<{ success: boolean }> => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${API_BASE_URL}/playlists/${playlistId}/tracks/${trackId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    if (!response.ok) throw new Error("Failed to remove track from playlist");
+    return response.json();
+  },
+
+  updatePlaylistOrder: async (
+    playlistId: number,
+    trackOrders: TrackOrder[]
+  ): Promise<{ success: boolean }> => {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${API_BASE_URL}/playlists/${playlistId}/order`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ trackOrders }),
+      }
+    );
+    if (!response.ok) throw new Error("Failed to update track order");
     return response.json();
   },
 };

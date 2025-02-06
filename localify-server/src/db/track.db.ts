@@ -1,5 +1,5 @@
 import type { Database } from "better-sqlite3";
-import type { Track, Album } from "../types/model.js";
+import type { Track, Album, Playlist } from "../types/model.js";
 
 export function createTracksTable(db: Database) {
   // First create albums table
@@ -47,6 +47,36 @@ export function createTracksTable(db: Database) {
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (userId, trackId),
         FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (trackId) REFERENCES tracks(id) ON DELETE CASCADE
+    );
+    `
+  ).run();
+
+  // Create playlists table
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS playlists (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT NULL,
+        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+    );
+    `
+  ).run();
+
+  // Create playlist_tracks table (Many-to-Many relationship)
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS playlist_tracks (
+        playlistId INTEGER NOT NULL,
+        trackId INTEGER NOT NULL,
+        position INTEGER NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (playlistId, trackId),
+        FOREIGN KEY (playlistId) REFERENCES playlists(id) ON DELETE CASCADE,
         FOREIGN KEY (trackId) REFERENCES tracks(id) ON DELETE CASCADE
     );
     `
@@ -350,4 +380,254 @@ export function getAllAlbumsWithTracks(
       tracks,
     };
   });
+}
+
+// Playlist-related functions
+export function createPlaylist(
+  db: Database,
+  userId: number,
+  name: string,
+  description: string | null = null
+): number {
+  const insertQuery = db.prepare(`
+    INSERT INTO playlists (userId, name, description, createdAt)
+    VALUES (?, ?, ?, ?)
+  `);
+  const result = insertQuery.run(
+    userId,
+    name,
+    description,
+    new Date().getTime()
+  );
+  return result.lastInsertRowid as number;
+}
+
+export function addTrackToPlaylist(
+  db: Database,
+  playlistId: number,
+  trackId: number,
+  position: number
+): void {
+  const insertQuery = db.prepare(`
+    INSERT INTO playlist_tracks (playlistId, trackId, position, timestamp)
+    VALUES (?, ?, ?, ?)
+  `);
+  insertQuery.run(playlistId, trackId, position, new Date().getTime());
+}
+
+export function removeTrackFromPlaylist(
+  db: Database,
+  playlistId: number,
+  trackId: number
+): boolean {
+  const deleteQuery = db.prepare(`
+    DELETE FROM playlist_tracks
+    WHERE playlistId = ? AND trackId = ?
+  `);
+  const result = deleteQuery.run(playlistId, trackId);
+  return result.changes > 0;
+}
+
+export function getPlaylistById(
+  db: Database,
+  playlistId: number,
+  userId: number | null
+):
+  | (Playlist & { tracks: (Track & { reaction: "like" | "dislike" | null })[] })
+  | undefined {
+  const playlist = db
+    .prepare(
+      `
+      SELECT p.*, u.username as ownerName
+      FROM playlists p
+      JOIN users u ON p.userId = u.id
+      WHERE p.id = ?
+    `
+    )
+    .get(playlistId) as (Playlist & { ownerName: string }) | undefined;
+
+  if (!playlist) return undefined;
+
+  const tracks = db
+    .prepare(
+      `
+      SELECT t.*, pt.position, r.type as reaction
+      FROM tracks t
+      JOIN playlist_tracks pt ON pt.trackId = t.id
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      WHERE pt.playlistId = ?
+      ORDER BY pt.position ASC
+    `
+    )
+    .all(userId, playlistId) as (Track & {
+    position: number;
+    reaction: "like" | "dislike" | null;
+  })[];
+
+  return {
+    ...playlist,
+    tracks,
+  };
+}
+
+export function getUserPlaylists(
+  db: Database,
+  userId: number
+): (Playlist & { trackCount: number })[] {
+  return db
+    .prepare(
+      `
+      SELECT p.*, COUNT(pt.trackId) as trackCount
+      FROM playlists p
+      LEFT JOIN playlist_tracks pt ON pt.playlistId = p.id
+      WHERE p.userId = ?
+      GROUP BY p.id
+      ORDER BY p.createdAt DESC
+    `
+    )
+    .all(userId) as (Playlist & { trackCount: number })[];
+}
+
+export function deletePlaylist(
+  db: Database,
+  playlistId: number,
+  userId: number
+): boolean {
+  const deleteQuery = db.prepare(`
+    DELETE FROM playlists
+    WHERE id = ? AND userId = ?
+  `);
+  const result = deleteQuery.run(playlistId, userId);
+  return result.changes > 0;
+}
+
+export function updatePlaylistOrder(
+  db: Database,
+  playlistId: number,
+  trackOrders: { trackId: number; position: number }[]
+): void {
+  const updateQuery = db.prepare(`
+    UPDATE playlist_tracks
+    SET position = ?
+    WHERE playlistId = ? AND trackId = ?
+  `);
+
+  const transaction = db.transaction((orders) => {
+    for (const order of orders) {
+      updateQuery.run(order.position, playlistId, order.trackId);
+    }
+  });
+
+  transaction(trackOrders);
+}
+
+export function isPlaylistOwner(
+  db: Database,
+  playlistId: number,
+  userId: number
+): boolean {
+  const playlist = db
+    .prepare("SELECT userId FROM playlists WHERE id = ?")
+    .get(playlistId) as { userId: number } | undefined;
+  return playlist?.userId === userId;
+}
+
+export function advancedSearch(
+  db: Database,
+  query: string,
+  userId: number | null,
+  limit: number = 5
+): {
+  artists: { name: string; trackCount: number }[];
+  albums: (Album & { artist: string | null; trackCount: number })[];
+  tracks: (Track & { reaction: "like" | "dislike" | null })[];
+} {
+  const searchTerm = `%${query}%`;
+
+  // Search for unique artists and their track counts
+  const artists = db
+    .prepare(
+      `
+      SELECT DISTINCT artist as name, COUNT(*) as trackCount
+      FROM tracks
+      WHERE artist IS NOT NULL AND artist LIKE ?
+      GROUP BY artist
+      ORDER BY trackCount DESC
+      LIMIT ?
+    `
+    )
+    .all(searchTerm, limit) as { name: string; trackCount: number }[];
+
+  // Search for albums with their track counts
+  const albums = db
+    .prepare(
+      `
+      SELECT a.*, COUNT(t.id) as trackCount
+      FROM albums a
+      LEFT JOIN tracks t ON t.albumId = a.id
+      WHERE a.title LIKE ? OR a.artist LIKE ?
+      GROUP BY a.id
+      ORDER BY a.title ASC
+      LIMIT ?
+    `
+    )
+    .all(searchTerm, searchTerm, limit) as (Album & {
+    trackCount: number;
+  })[];
+
+  // Search for tracks with reactions
+  const tracks = userId
+    ? db
+        .prepare(
+          `
+          SELECT t.*, r.type as reaction
+          FROM tracks t
+          LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+          WHERE t.title LIKE ? 
+             OR t.artist LIKE ? 
+             OR t.filename LIKE ?
+          ORDER BY 
+            CASE 
+              WHEN t.title LIKE ? THEN 1
+              WHEN t.artist LIKE ? THEN 2
+              ELSE 3
+            END,
+            t.title ASC
+          LIMIT ?
+        `
+        )
+        .all(
+          userId,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          limit
+        )
+    : db
+        .prepare(
+          `
+          SELECT t.*, NULL as reaction
+          FROM tracks t
+          WHERE t.title LIKE ? 
+             OR t.artist LIKE ? 
+             OR t.filename LIKE ?
+          ORDER BY 
+            CASE 
+              WHEN t.title LIKE ? THEN 1
+              WHEN t.artist LIKE ? THEN 2
+              ELSE 3
+            END,
+            t.title ASC
+          LIMIT ?
+        `
+        )
+        .all(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, limit);
+
+  return {
+    artists,
+    albums,
+    tracks: tracks as (Track & { reaction: "like" | "dislike" | null })[],
+  };
 }
