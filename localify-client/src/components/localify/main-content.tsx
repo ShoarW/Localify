@@ -1,11 +1,14 @@
 import { Track, api } from "../../services/api";
 import { ContentView } from "./content-view";
+import { Playlist } from "../../services/api";
 
 interface MainContentProps {
   tracks: Track[];
   currentTrackIndex: number;
   isPlaying: boolean;
   onTrackSelect: (index: number) => void;
+  playlists: Playlist[];
+  onPlaylistsChange: (playlists: Playlist[]) => void;
 }
 
 export const MainContent = ({
@@ -13,6 +16,8 @@ export const MainContent = ({
   currentTrackIndex,
   isPlaying,
   onTrackSelect,
+  playlists,
+  onPlaylistsChange,
 }: MainContentProps) => {
   const currentTrack = tracks[currentTrackIndex];
 
@@ -30,6 +35,8 @@ export const MainContent = ({
       currentTrackIndex={currentTrackIndex}
       isPlaying={isPlaying}
       onTrackSelect={onTrackSelect}
+      playlists={playlists}
+      onPlaylistsChange={onPlaylistsChange}
     />
   );
 };

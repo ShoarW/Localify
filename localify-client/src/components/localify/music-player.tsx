@@ -143,25 +143,75 @@ export const MusicPlayer = ({
         if ("mediaSession" in navigator) {
           navigator.mediaSession.metadata = new MediaMetadata({
             title: currentTrack.title,
-            artist: currentTrack.artist,
+            artist: currentTrack.artistName,
             album: currentTrack.album,
             artwork: [
               {
                 src: api.getTrackCoverUrl(currentTrack),
-                sizes: "56x56",
-                type: "image/png",
+                sizes: "96x96",
+                type: "image/jpeg",
+              },
+              {
+                src: api.getTrackCoverUrl(currentTrack),
+                sizes: "128x128",
+                type: "image/jpeg",
+              },
+              {
+                src: api.getTrackCoverUrl(currentTrack),
+                sizes: "192x192",
+                type: "image/jpeg",
+              },
+              {
+                src: api.getTrackCoverUrl(currentTrack),
+                sizes: "256x256",
+                type: "image/jpeg",
+              },
+              {
+                src: api.getTrackCoverUrl(currentTrack),
+                sizes: "384x384",
+                type: "image/jpeg",
+              },
+              {
+                src: api.getTrackCoverUrl(currentTrack),
+                sizes: "512x512",
+                type: "image/jpeg",
               },
             ],
           });
 
           // Add media session action handlers
-          navigator.mediaSession.setActionHandler("play", togglePlay);
-          navigator.mediaSession.setActionHandler("pause", togglePlay);
+          navigator.mediaSession.setActionHandler("play", () => {
+            audioRef.current.play();
+            setIsPlaying(true);
+          });
+          navigator.mediaSession.setActionHandler("pause", () => {
+            audioRef.current.pause();
+            setIsPlaying(false);
+          });
           navigator.mediaSession.setActionHandler(
             "previoustrack",
             handlePrevious
           );
           navigator.mediaSession.setActionHandler("nexttrack", handleNext);
+          navigator.mediaSession.setActionHandler("seekto", (details) => {
+            if (details.seekTime) {
+              audioRef.current.currentTime = details.seekTime;
+            }
+          });
+          navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+            const skipTime = details.seekOffset || 10;
+            audioRef.current.currentTime = Math.max(
+              audioRef.current.currentTime - skipTime,
+              0
+            );
+          });
+          navigator.mediaSession.setActionHandler("seekforward", (details) => {
+            const skipTime = details.seekOffset || 10;
+            audioRef.current.currentTime = Math.min(
+              audioRef.current.currentTime + skipTime,
+              audioRef.current.duration
+            );
+          });
         }
 
         if (isPlaying) {
@@ -326,6 +376,16 @@ export const MusicPlayer = ({
     }
   };
 
+  // Add effect to update window title
+  useEffect(() => {
+    const currentTrack = playlist[currentTrackIndex];
+    if (currentTrack && isPlaying) {
+      document.title = `${currentTrack.title} - ${currentTrack.album} - Localify`;
+    } else {
+      document.title = "Localify";
+    }
+  }, [currentTrackIndex, playlist, isPlaying]);
+
   return (
     <div className="h-24 bg-black/30 backdrop-blur-xl border-t border-white/10 flex items-center px-4 relative">
       {/* Track Info Section */}
@@ -384,7 +444,7 @@ export const MusicPlayer = ({
                   to={`/artists/${currentTrack.artistId}`}
                   className="text-sm text-white/60 truncate hover:text-white transition-colors"
                 >
-                  {currentTrack.artist}
+                  {currentTrack.artistName}
                 </Link>
               </div>
             </div>
@@ -640,7 +700,7 @@ export const MusicPlayer = ({
                         {track.title}
                       </p>
                       <p className="text-sm text-white/60 truncate">
-                        {track.artist}
+                        {track.artistName}
                       </p>
                     </div>
                     {index === currentTrackIndex && isPlaying && (

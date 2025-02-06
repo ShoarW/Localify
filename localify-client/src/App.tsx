@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -18,11 +18,13 @@ import { ProfilePage } from "./pages/profile";
 import { LikedMusicPage } from "./pages/liked-music";
 import { PlaylistsPage } from "./pages/playlists";
 import { PlaylistPage } from "./pages/playlist";
-import { api, Track } from "./services/api";
+import { api, Track, Playlist } from "./services/api";
 import { SearchModal } from "./components/localify/search-modal";
 import React from "react";
 import { ArtistsPage } from "./components/localify/artists-page";
 import { ArtistPage } from "./components/localify/artist-page";
+import { getUser } from "./utils/auth";
+import { SearchContext } from "./contexts/search-context";
 
 // Create a context for the search modal
 export const SearchContext = React.createContext<{
@@ -54,6 +56,28 @@ const AppLayout = () => {
   const [currentTrackId, setCurrentTrackId] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  // Add playlist state
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [isPlaylistsLoading, setIsPlaylistsLoading] = useState(true);
+
+  // Add playlist fetching effect
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const fetchPlaylists = async () => {
+      try {
+        const data = await api.getPlaylists();
+        setPlaylists(data);
+      } catch (error) {
+        console.error("Failed to fetch playlists:", error);
+      } finally {
+        setIsPlaylistsLoading(false);
+      }
+    };
+
+    fetchPlaylists();
+  }, []);
 
   // Find the current track and its index in the current playlist
   const currentTrackIndex = currentPlaylist.findIndex(
@@ -85,7 +109,7 @@ const AppLayout = () => {
           className="relative flex flex-1 overflow-hidden"
           style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
         >
-          <Sidebar />
+          <Sidebar playlists={playlists} />
           <Routes>
             <Route
               path="/"
@@ -99,6 +123,8 @@ const AppLayout = () => {
                     setCurrentTrackId(allTracks[index].id);
                     setIsPlaying(true);
                   }}
+                  playlists={playlists}
+                  onPlaylistsChange={setPlaylists}
                 />
               }
             />
@@ -124,6 +150,8 @@ const AppLayout = () => {
                   currentTrackId={currentTrackId}
                   isPlaying={isPlaying}
                   onPlayAlbum={handlePlayTrack}
+                  playlists={playlists}
+                  onPlaylistsChange={setPlaylists}
                 />
               }
             />
@@ -135,6 +163,8 @@ const AppLayout = () => {
                   currentTrackId={currentTrackId}
                   isPlaying={isPlaying}
                   onPlayTrack={handlePlayTrack}
+                  playlists={playlists}
+                  onPlaylistsChange={setPlaylists}
                 />
               }
             />
@@ -146,10 +176,21 @@ const AppLayout = () => {
                   currentTrackId={currentTrackId}
                   isPlaying={isPlaying}
                   onPlayTrack={handlePlayTrack}
+                  playlists={playlists}
+                  onPlaylistsChange={setPlaylists}
                 />
               }
             />
-            <Route path="/playlists" element={<PlaylistsPage />} />
+            <Route
+              path="/playlists"
+              element={
+                <PlaylistsPage
+                  playlists={playlists}
+                  isLoading={isPlaylistsLoading}
+                  onPlaylistsChange={setPlaylists}
+                />
+              }
+            />
             <Route
               path="/playlists/:id"
               element={
@@ -157,6 +198,8 @@ const AppLayout = () => {
                   currentTrackId={currentTrackId}
                   isPlaying={isPlaying}
                   onPlayTrack={handlePlayTrack}
+                  playlists={playlists}
+                  onPlaylistsChange={setPlaylists}
                 />
               }
             />

@@ -1,6 +1,7 @@
 import { Play } from "lucide-react";
 import { Track } from "../../services/api";
 import { TrackItem } from "./track-item";
+import { Playlist } from "../../services/api";
 
 interface ContentViewProps {
   title: string;
@@ -12,6 +13,8 @@ interface ContentViewProps {
   isPlaying: boolean;
   onTrackSelect: (index: number) => void;
   gradient?: string;
+  playlists: Playlist[];
+  onPlaylistsChange?: (playlists: Playlist[]) => void;
 }
 
 export const ContentView = ({
@@ -24,6 +27,8 @@ export const ContentView = ({
   isPlaying,
   onTrackSelect,
   gradient = "from-red-500 to-rose-600",
+  playlists,
+  onPlaylistsChange,
 }: ContentViewProps) => {
   return (
     <div className="flex-1 overflow-y-auto backdrop-blur-xl relative">
@@ -103,6 +108,8 @@ export const ContentView = ({
                 reaction={track.reaction}
                 trackId={track.id}
                 onClick={() => onTrackSelect(index)}
+                playlists={playlists}
+                onPlaylistsChange={onPlaylistsChange}
               />
             ))}
           </div>

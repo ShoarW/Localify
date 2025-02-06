@@ -23,10 +23,13 @@ interface UserData {
   isAdmin: boolean;
 }
 
-export const Sidebar = () => {
+interface SidebarProps {
+  playlists: Playlist[];
+}
+
+export const Sidebar = ({ playlists }: SidebarProps) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserData | null>(null);
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const { openSearch } = useContext(SearchContext);
 
   useEffect(() => {
@@ -47,21 +50,6 @@ export const Sidebar = () => {
       setUser(userData);
     }
   }, []);
-
-  useEffect(() => {
-    const fetchPlaylists = async () => {
-      try {
-        const data = await api.getPlaylists();
-        setPlaylists(data);
-      } catch (error) {
-        console.error("Failed to fetch playlists:", error);
-      }
-    };
-
-    if (user) {
-      fetchPlaylists();
-    }
-  }, [user]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");

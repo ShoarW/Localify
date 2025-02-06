@@ -23,6 +23,8 @@ interface TrackItemProps {
   number?: number;
   onClick?: () => void;
   onReactionUpdate?: (trackId: number, reaction: ReactionType) => void;
+  playlists: Playlist[];
+  onPlaylistsChange?: (playlists: Playlist[]) => void;
 }
 
 export const TrackItem = ({
@@ -36,8 +38,9 @@ export const TrackItem = ({
   number,
   onClick,
   onReactionUpdate,
+  playlists,
+  onPlaylistsChange,
 }: TrackItemProps) => {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
@@ -45,28 +48,17 @@ export const TrackItem = ({
   const [error, setError] = useState<string | null>(null);
   const [reactionLoading, setReactionLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchPlaylists = async () => {
-      try {
-        const data = await api.getPlaylists();
-        setPlaylists(data);
-      } catch (error) {
-        console.error("Failed to fetch playlists:", error);
-      }
-    };
-
-    fetchPlaylists();
-  }, []);
-
   const handleAddToPlaylist = async (playlistId: number) => {
     try {
       await api.addTrackToPlaylist(playlistId, trackId);
       // Update the playlist's track count in the local state
-      setPlaylists(
-        playlists.map((p) =>
-          p.id === playlistId ? { ...p, trackCount: p.trackCount + 1 } : p
-        )
-      );
+      if (onPlaylistsChange) {
+        onPlaylistsChange(
+          playlists.map((p) =>
+            p.id === playlistId ? { ...p, trackCount: p.trackCount + 1 } : p
+          )
+        );
+      }
     } catch (error) {
       console.error("Failed to add track to playlist:", error);
     }
@@ -91,7 +83,9 @@ export const TrackItem = ({
         trackCount: 1,
         createdAt: new Date().toISOString(),
       };
-      setPlaylists((prev) => [...prev, newPlaylist]);
+      if (onPlaylistsChange) {
+        onPlaylistsChange([...playlists, newPlaylist]);
+      }
       handleCloseModal();
     } catch (error) {
       setError("Failed to create playlist");

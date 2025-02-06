@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, Track } from "../services/api";
+import { api, Track, Playlist } from "../services/api";
 import { ContentView } from "../components/localify/content-view";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -7,12 +7,16 @@ interface LikedMusicProps {
   currentTrackId: number | null;
   isPlaying: boolean;
   onPlayTrack: (tracks: Track[], startIndex: number) => void;
+  playlists: Playlist[];
+  onPlaylistsChange: (playlists: Playlist[]) => void;
 }
 
 export const LikedMusicPage = ({
   currentTrackId,
   isPlaying,
   onPlayTrack,
+  playlists,
+  onPlaylistsChange,
 }: LikedMusicProps) => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,11 +77,13 @@ export const LikedMusicPage = ({
         title="Liked Songs"
         subtitle="Playlist"
         coverImage="https://iili.io/HlHy9Yx.png"
-        artist={`${total} songs`}
+        artist="Your Library"
         tracks={tracks}
         currentTrackIndex={currentTrackIndex}
         isPlaying={isPlaying}
         onTrackSelect={(index) => onPlayTrack(tracks, index)}
+        playlists={playlists}
+        onPlaylistsChange={onPlaylistsChange}
       />
 
       {totalPages > 1 && (

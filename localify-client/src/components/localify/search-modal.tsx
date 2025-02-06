@@ -1,5 +1,5 @@
 import { Search, X, Music, User, Play } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api, SearchResults, Track } from "../../services/api";
 import { Link } from "react-router-dom";
 
@@ -8,6 +8,12 @@ interface SearchModalProps {
   onClose: () => void;
   onPlayTrack: (track: Track) => void;
 }
+
+type SearchItem = {
+  type: "artist" | "album" | "track";
+  id: number;
+  index: number;
+};
 
 export const SearchModal = ({
   isOpen,
@@ -18,24 +24,108 @@ export const SearchModal = ({
   const [results, setResults] = useState<SearchResults | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<SearchItem | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Create refs for each section to enable scrolling into view
+  const artistsRef = useRef<HTMLDivElement>(null);
+  const albumsRef = useRef<HTMLDivElement>(null);
+  const tracksRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+        return;
+      }
+
+      if (!results) return;
+
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+
+        const allItems: SearchItem[] = [
+          ...results.artists.map((_, i) => ({
+            type: "artist" as const,
+            id: results.artists[i].id,
+            index: i,
+          })),
+          ...results.albums.map((_, i) => ({
+            type: "album" as const,
+            id: results.albums[i].id,
+            index: i,
+          })),
+          ...results.tracks.map((_, i) => ({
+            type: "track" as const,
+            id: results.tracks[i].id,
+            index: i,
+          })),
+        ];
+
+        if (allItems.length === 0) return;
+
+        let currentIndex = -1;
+        if (selectedItem) {
+          currentIndex = allItems.findIndex(
+            (item) =>
+              item.type === selectedItem.type && item.id === selectedItem.id
+          );
+        }
+
+        let newIndex = currentIndex;
+        if (e.key === "ArrowDown") {
+          newIndex =
+            currentIndex === allItems.length - 1 ? 0 : currentIndex + 1;
+        } else {
+          newIndex =
+            currentIndex === -1 || currentIndex === 0
+              ? allItems.length - 1
+              : currentIndex - 1;
+        }
+
+        const newSelectedItem = allItems[newIndex];
+        setSelectedItem(newSelectedItem);
+
+        // Scroll the selected item into view
+        const itemElement = document.querySelector(
+          `[data-search-item="${newSelectedItem.type}-${newSelectedItem.id}"]`
+        );
+        if (itemElement) {
+          itemElement.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+      }
+
+      if (e.key === "Enter" && selectedItem) {
+        e.preventDefault();
+        if (selectedItem.type === "track") {
+          const track = results.tracks[selectedItem.index];
+          handleTrackClick(track);
+        } else {
+          const element = document.querySelector(
+            `[data-search-item="${selectedItem.type}-${selectedItem.id}"] a`
+          ) as HTMLElement;
+          if (element) {
+            element.click();
+          }
+        }
+      }
     };
 
     if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
+      document.addEventListener("keydown", handleKeyPress);
       document.body.style.overflow = "hidden";
     }
 
     return () => {
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("keydown", handleKeyPress);
       document.body.style.overflow = "unset";
     };
-  }, [isOpen]);
+  }, [isOpen, results, selectedItem]);
 
   useEffect(() => {
+    // Reset selection when query changes
+    setSelectedItem(null);
+
     const searchDebounce = setTimeout(async () => {
       if (!query.trim()) {
         setResults(null);
@@ -64,6 +154,7 @@ export const SearchModal = ({
     setTimeout(() => {
       setResults(null);
       setQuery("");
+      setSelectedItem(null);
     }, 200);
   };
 
@@ -103,6 +194,7 @@ export const SearchModal = ({
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/40" />
             <input
+              ref={searchInputRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -131,64 +223,74 @@ export const SearchModal = ({
             <div className="p-6 space-y-8">
               {/* Artists */}
               {results.artists.length > 0 && (
-                <div>
+                <div ref={artistsRef}>
                   <h3 className="text-white/60 text-sm font-medium mb-4">
                     Artists
                   </h3>
                   <div className="space-y-2">
                     {results.artists.map((artist) => (
-                      <Link
+                      <div
                         key={artist.id}
-                        to={`/artists/${artist.id}`}
-                        onClick={handleClose}
-                        className="flex items-center justify-between p-3 rounded-xl hover:bg-white/10 transition-colors"
+                        data-search-item={`artist-${artist.id}`}
+                        className={`rounded-xl transition-colors ${
+                          selectedItem?.type === "artist" &&
+                          selectedItem.id === artist.id
+                            ? "bg-white/10"
+                            : "hover:bg-white/10"
+                        }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center overflow-hidden">
-                            {api.getArtistImageUrl(artist.id) ? (
-                              <img
-                                src={`${api.getArtistImageUrl(
-                                  artist.id
-                                )}?t=${Date.now()}`}
-                                alt={artist.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  const parent = target.parentElement;
-                                  if (!parent) return;
+                        <Link
+                          to={`/artists/${artist.id}`}
+                          onClick={handleClose}
+                          className="flex items-center justify-between p-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center overflow-hidden">
+                              {api.getArtistImageUrl(artist.id) ? (
+                                <img
+                                  src={`${api.getArtistImageUrl(
+                                    artist.id
+                                  )}?t=${Date.now()}`}
+                                  alt={artist.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    const parent = target.parentElement;
+                                    if (!parent) return;
 
-                                  // Clean up any existing fallback icons
-                                  const existingIcons =
-                                    parent.querySelectorAll(".fallback-icon");
-                                  existingIcons.forEach((icon) =>
-                                    icon.remove()
-                                  );
+                                    // Clean up any existing fallback icons
+                                    const existingIcons =
+                                      parent.querySelectorAll(".fallback-icon");
+                                    existingIcons.forEach((icon) =>
+                                      icon.remove()
+                                    );
 
-                                  // Hide the failed image
-                                  target.style.display = "none";
+                                    // Hide the failed image
+                                    target.style.display = "none";
 
-                                  // Add new icon with a class for future cleanup
-                                  const icon = document.createElement("div");
-                                  icon.className = "fallback-icon";
-                                  icon.innerHTML =
-                                    '<svg class="w-5 h-5 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-                                  parent.appendChild(icon);
-                                }}
-                              />
-                            ) : (
-                              <User className="w-5 h-5 text-white/40" />
-                            )}
+                                    // Add new icon with a class for future cleanup
+                                    const icon = document.createElement("div");
+                                    icon.className = "fallback-icon";
+                                    icon.innerHTML =
+                                      '<svg class="w-5 h-5 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+                                    parent.appendChild(icon);
+                                  }}
+                                />
+                              ) : (
+                                <User className="w-5 h-5 text-white/40" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-white font-medium">
+                                {artist.name}
+                              </p>
+                              <p className="text-white/60 text-sm">
+                                {artist.trackCount} tracks
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-white font-medium">
-                              {artist.name}
-                            </p>
-                            <p className="text-white/60 text-sm">
-                              {artist.trackCount} tracks
-                            </p>
-                          </div>
-                        </div>
-                      </Link>
+                        </Link>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -196,40 +298,50 @@ export const SearchModal = ({
 
               {/* Albums */}
               {results.albums.length > 0 && (
-                <div>
+                <div ref={albumsRef}>
                   <h3 className="text-white/60 text-sm font-medium mb-4">
                     Albums
                   </h3>
                   <div className="space-y-2">
                     {results.albums.map((album) => (
-                      <Link
+                      <div
                         key={album.id}
-                        to={`/albums/${album.id}`}
-                        onClick={handleClose}
-                        className="flex items-center justify-between p-3 rounded-xl hover:bg-white/10 transition-colors"
+                        data-search-item={`album-${album.id}`}
+                        className={`rounded-xl transition-colors ${
+                          selectedItem?.type === "album" &&
+                          selectedItem.id === album.id
+                            ? "bg-white/10"
+                            : "hover:bg-white/10"
+                        }`}
                       >
-                        <div className="flex items-center gap-3">
-                          {album.coverPath ? (
-                            <img
-                              src={api.getAlbumCoverUrl(album.id)}
-                              alt={album.title}
-                              className="w-10 h-10 rounded-lg object-cover"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
-                              <Music className="w-5 h-5 text-white/40" />
+                        <Link
+                          to={`/albums/${album.id}`}
+                          onClick={handleClose}
+                          className="flex items-center justify-between p-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            {album.coverPath ? (
+                              <img
+                                src={api.getAlbumCoverUrl(album.id)}
+                                alt={album.title}
+                                className="w-10 h-10 rounded-lg object-cover"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
+                                <Music className="w-5 h-5 text-white/40" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-white font-medium">
+                                {album.title}
+                              </p>
+                              <p className="text-white/60 text-sm">
+                                {album.artist} • {album.trackCount} tracks
+                              </p>
                             </div>
-                          )}
-                          <div>
-                            <p className="text-white font-medium">
-                              {album.title}
-                            </p>
-                            <p className="text-white/60 text-sm">
-                              {album.artist} • {album.trackCount} tracks
-                            </p>
                           </div>
-                        </div>
-                      </Link>
+                        </Link>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -237,7 +349,7 @@ export const SearchModal = ({
 
               {/* Tracks */}
               {results.tracks.length > 0 && (
-                <div>
+                <div ref={tracksRef}>
                   <h3 className="text-white/60 text-sm font-medium mb-4">
                     Tracks
                   </h3>
@@ -245,7 +357,13 @@ export const SearchModal = ({
                     {results.tracks.map((track) => (
                       <div
                         key={track.id}
-                        className="flex items-center justify-between p-3 rounded-xl hover:bg-white/10 transition-colors cursor-pointer group"
+                        data-search-item={`track-${track.id}`}
+                        className={`flex items-center justify-between p-3 rounded-xl transition-colors cursor-pointer group ${
+                          selectedItem?.type === "track" &&
+                          selectedItem.id === track.id
+                            ? "bg-white/10"
+                            : "hover:bg-white/10"
+                        }`}
                         onClick={() => handleTrackClick(track)}
                       >
                         <div className="flex items-center gap-3">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { PlaylistDetails, Track, api } from "../services/api";
+import { PlaylistDetails, Track, api, Playlist } from "../services/api";
 import { ContentView } from "../components/localify/content-view";
 import { Trash2 } from "lucide-react";
 import { getGradientByIndex } from "../lib/utils";
@@ -9,12 +9,16 @@ interface PlaylistPageProps {
   currentTrackId: number | null;
   isPlaying: boolean;
   onPlayTrack: (tracks: Track[], startIndex: number) => void;
+  playlists: Playlist[];
+  onPlaylistsChange: (playlists: Playlist[]) => void;
 }
 
 export const PlaylistPage = ({
   currentTrackId,
   isPlaying,
   onPlayTrack,
+  playlists,
+  onPlaylistsChange,
 }: PlaylistPageProps) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -103,6 +107,8 @@ export const PlaylistPage = ({
         isPlaying={isPlaying}
         onTrackSelect={(index) => onPlayTrack(playlist.tracks, index)}
         gradient={getGradientByIndex(playlist.id)}
+        playlists={playlists}
+        onPlaylistsChange={onPlaylistsChange}
       />
 
       {error && (

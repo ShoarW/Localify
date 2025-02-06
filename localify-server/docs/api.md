@@ -114,6 +114,7 @@
   artist: string | null;
   year: number | null;
   coverPath: string | null;
+  type: "single" | "ep" | "album"; // Classification based on track count
   tracks: {
     id: number;
     title: string;
@@ -136,6 +137,7 @@
     artist: string | null;
     year: number | null;
     coverPath: string | null;
+    type: "single" | "ep" | "album"; // Classification based on track count
   };
   tracks: {
     id: number;
@@ -416,7 +418,7 @@
   randomTracks: {
     id: number;
     title: string;
-    artist: string;
+    artistName: string | null;
     albumId: number | null;
     duration: number;
     reaction: "like" | "dislike" | null;
@@ -427,12 +429,14 @@
     year: number | null;
     coverPath: string | null;
     trackCount: number;
+    type: "single" | "ep" | "album";
     createdAt: string;
     updatedAt: string | null;
   }[];
   singles: {
     id: number;
     title: string;
+    artistName: string | null;
     duration: number;
     reaction: "like" | "dislike" | null;
   }[];

@@ -1,32 +1,25 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Playlist, api } from "../services/api";
 import { PlusCircle, Music } from "lucide-react";
 import { Modal } from "../components/ui/modal";
 
-export const PlaylistsPage = () => {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface PlaylistsPageProps {
+  playlists: Playlist[];
+  isLoading: boolean;
+  onPlaylistsChange: (playlists: Playlist[]) => void;
+}
+
+export const PlaylistsPage = ({
+  playlists,
+  isLoading,
+  onPlaylistsChange,
+}: PlaylistsPageProps) => {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-
-  useEffect(() => {
-    const fetchPlaylists = async () => {
-      try {
-        const data = await api.getPlaylists();
-        setPlaylists(data);
-      } catch (error) {
-        setError("Failed to fetch playlists");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPlaylists();
-  }, []);
 
   const handleCreatePlaylist = async () => {
     if (!newPlaylistName.trim() || isCreating) return;
@@ -45,7 +38,7 @@ export const PlaylistsPage = () => {
         trackCount: 0,
         createdAt: new Date().toISOString(),
       };
-      setPlaylists((prev) => [...prev, newPlaylist]);
+      onPlaylistsChange([...playlists, newPlaylist]);
       handleCloseModal();
     } catch (error) {
       setError("Failed to create playlist");

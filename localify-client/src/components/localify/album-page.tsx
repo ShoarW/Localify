@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { AlbumWithTracks, Track, api } from "../../services/api";
+import { AlbumWithTracks, Track, api, Playlist } from "../../services/api";
 import { Play, Shuffle } from "lucide-react";
 import { TrackItem } from "./track-item";
 import { Link } from "react-router-dom";
@@ -9,12 +9,16 @@ interface AlbumPageProps {
   currentTrackId: number | null;
   isPlaying: boolean;
   onPlayAlbum: (tracks: Track[], startIndex: number) => void;
+  playlists: Playlist[];
+  onPlaylistsChange: (playlists: Playlist[]) => void;
 }
 
 export const AlbumPage = ({
   currentTrackId,
   isPlaying,
   onPlayAlbum,
+  playlists,
+  onPlaylistsChange,
 }: AlbumPageProps) => {
   const { id } = useParams<{ id: string }>();
   const [albumData, setAlbumData] = useState<AlbumWithTracks | null>(null);
@@ -133,11 +137,26 @@ export const AlbumPage = ({
                 </button>
               </div>
               <div className="flex items-center gap-2 text-white/60 text-sm">
-                <img
-                  src={api.getAlbumCoverUrl(album.id)}
-                  alt={album.artist}
-                  className="w-6 h-6 rounded-full shrink-0"
-                />
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-white/10 to-white/5 shrink-0 overflow-hidden flex items-center justify-center">
+                  <img
+                    src={api.getArtistImageUrl(album.artistId)}
+                    alt={album.artist}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = "none";
+                      target.parentElement?.classList.add(
+                        "flex",
+                        "items-center",
+                        "justify-center"
+                      );
+                      const icon = document.createElement("div");
+                      icon.innerHTML =
+                        '<svg class="w-3 h-3 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+                      target.parentElement?.appendChild(icon);
+                    }}
+                  />
+                </div>
                 <Link
                   to={`/artists/${album.artistId}`}
                   className="text-white font-medium truncate hover:text-white/80 transition-colors"
@@ -165,6 +184,8 @@ export const AlbumPage = ({
               trackId={track.id}
               onClick={() => handleTrackClick(index)}
               onReactionUpdate={handleReactionUpdate}
+              playlists={playlists}
+              onPlaylistsChange={onPlaylistsChange}
             />
           ))}
         </div>

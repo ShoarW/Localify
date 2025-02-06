@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { ArtistDetails, Track, api } from "../../services/api";
+import { ArtistDetails, Track, api, Playlist } from "../../services/api";
 import {
   User,
   Play,
@@ -10,6 +10,7 @@ import {
   Shuffle,
 } from "lucide-react";
 import { TrackItem } from "./track-item";
+import { Link } from "react-router-dom";
 import { AlbumCard } from "./album-card";
 import { EditArtistModal } from "./edit-artist-modal";
 import { getUser } from "../../utils/auth";
@@ -18,12 +19,16 @@ interface ArtistPageProps {
   currentTrackId: number | null;
   isPlaying: boolean;
   onPlayTrack: (tracks: Track[], startIndex: number) => void;
+  playlists: Playlist[];
+  onPlaylistsChange: (playlists: Playlist[]) => void;
 }
 
 export const ArtistPage = ({
   currentTrackId,
   isPlaying,
   onPlayTrack,
+  playlists,
+  onPlaylistsChange,
 }: ArtistPageProps) => {
   const { id } = useParams<{ id: string }>();
   const [artistData, setArtistData] = useState<ArtistDetails | null>(null);
@@ -126,7 +131,7 @@ export const ArtistPage = ({
     <div className="flex-1 h-full overflow-y-auto hide-scrollbar backdrop-blur-xl bg-gradient-to-b from-black/50 to-black/30">
       <div className="p-8">
         {/* Artist Header */}
-        <div className="flex flex-col md:flex-row md:items-end gap-6 mb-8">
+        <div className="flex flex-col md:flex-row md:items-start gap-6 mb-8">
           <div className="relative group shrink-0">
             <div className="absolute -inset-2 rounded-2xl bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
             <div className="relative w-60 h-60">
@@ -223,13 +228,15 @@ export const ArtistPage = ({
                   number={index + 1}
                   title={track.title}
                   artist={track.artist}
-                  duration={track.duration}
+                  duration={Math.floor(track.duration)}
                   isActive={currentTrackId === track.id}
                   isPlaying={currentTrackId === track.id && isPlaying}
                   reaction={track.reaction}
                   trackId={track.id}
                   onClick={() => handleTrackClick(randomTracks, index)}
                   onReactionUpdate={handleReactionUpdate}
+                  playlists={playlists}
+                  onPlaylistsChange={onPlaylistsChange}
                 />
               ))}
             </div>
@@ -297,6 +304,8 @@ export const ArtistPage = ({
                     trackId={track.id}
                     onClick={() => handleTrackClick([fullTrack], 0)}
                     onReactionUpdate={handleReactionUpdate}
+                    playlists={playlists}
+                    onPlaylistsChange={onPlaylistsChange}
                   />
                 );
               })}

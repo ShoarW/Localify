@@ -103,31 +103,65 @@ export function createTracksTable(db: Database) {
 export function getAlbumById(
   db: Database,
   id: number
-): (Album & { artist: string | null }) | undefined {
-  return db
+):
+  | (Album & { artist: string | null; type: "single" | "ep" | "album" })
+  | undefined {
+  const result = db
     .prepare(
       `
-    SELECT a.*, ar.name as artist 
-    FROM albums a
-    LEFT JOIN artists ar ON a.artistId = ar.id
-    WHERE a.id = ?
-  `
+      WITH album_tracks AS (
+        SELECT a.*, ar.name as artist, COUNT(t.id) as trackCount
+        FROM albums a
+        LEFT JOIN artists ar ON a.artistId = ar.id
+        LEFT JOIN tracks t ON t.albumId = a.id
+        WHERE a.id = ?
+        GROUP BY a.id
+      )
+      SELECT 
+        *,
+        CASE 
+          WHEN trackCount <= 3 THEN 'single'
+          WHEN trackCount <= 6 THEN 'ep'
+          ELSE 'album'
+        END as type
+      FROM album_tracks
+    `
     )
-    .get(id) as (Album & { artist: string | null }) | undefined;
+    .get(id) as
+    | (Album & { artist: string | null; type: "single" | "ep" | "album" })
+    | undefined;
+
+  return result;
 }
 
 export function getAllAlbums(
   db: Database
-): (Album & { artist: string | null })[] {
+): (Album & { artist: string | null; type: "single" | "ep" | "album" })[] {
   return db
     .prepare(
       `
-    SELECT a.*, ar.name as artist 
-    FROM albums a
-    LEFT JOIN artists ar ON a.artistId = ar.id
-  `
+      WITH album_tracks AS (
+        SELECT a.*, ar.name as artist, COUNT(t.id) as trackCount
+        FROM albums a
+        LEFT JOIN artists ar ON a.artistId = ar.id
+        LEFT JOIN tracks t ON t.albumId = a.id
+        GROUP BY a.id
+      )
+      SELECT 
+        *,
+        CASE 
+          WHEN trackCount <= 3 THEN 'single'
+          WHEN trackCount <= 6 THEN 'ep'
+          ELSE 'album'
+        END as type
+      FROM album_tracks
+      ORDER BY title ASC
+    `
     )
-    .all() as (Album & { artist: string | null })[];
+    .all() as (Album & {
+    artist: string | null;
+    type: "single" | "ep" | "album";
+  })[];
 }
 
 export function addAlbum(db: Database, album: Omit<Album, "id">): number {
@@ -408,24 +442,41 @@ export function getTracksByAlbumIdWithReactions(
   db: Database,
   albumId: number,
   userId: number | null
-): (Track & { reaction: "like" | "dislike" | null })[] {
+): (Track & {
+  reaction: "like" | "dislike" | null;
+  artistName: string | null;
+})[] {
   if (!userId) {
-    const tracks = getTracksByAlbumId(db, albumId);
-    return tracks.map((track) => ({ ...track, reaction: null }));
+    return db
+      .prepare(
+        `
+        SELECT t.*, NULL as reaction, ar.name as artistName
+        FROM tracks t
+        LEFT JOIN artists ar ON t.artistId = ar.id
+        WHERE t.albumId = ?
+        ORDER BY t.id ASC
+      `
+      )
+      .all(albumId) as (Track & {
+      reaction: "like" | "dislike" | null;
+      artistName: string | null;
+    })[];
   }
 
   return db
     .prepare(
       `
-    SELECT t.*, r.type as reaction
-    FROM tracks t
-    LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
-    WHERE t.albumId = ?
-    ORDER BY t.id ASC
-  `
+      SELECT t.*, r.type as reaction, ar.name as artistName
+      FROM tracks t
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists ar ON t.artistId = ar.id
+      WHERE t.albumId = ?
+      ORDER BY t.id ASC
+    `
     )
     .all(userId, albumId) as (Track & {
     reaction: "like" | "dislike" | null;
+    artistName: string | null;
   })[];
 }
 
@@ -434,6 +485,7 @@ export function getAllAlbumsWithTracks(
   userId: number | null
 ): (Album & {
   artist: string | null;
+  type: "single" | "ep" | "album";
   tracks: (Track & { reaction: "like" | "dislike" | null })[];
 })[] {
   const albums = getAllAlbums(db);
@@ -453,7 +505,7 @@ export function getAlbumWithTracks(
   userId: number | null
 ):
   | {
-      album: Album & { artist: string | null };
+      album: Album & { artist: string | null; type: "single" | "ep" | "album" };
       tracks: (Track & { reaction: "like" | "dislike" | null })[];
     }
   | undefined {
@@ -739,7 +791,10 @@ export function getArtistById(
         updatedAt: string | null;
       };
       randomTracks: (Track & { reaction: "like" | "dislike" | null })[];
-      albums: (Album & { trackCount: number })[];
+      albums: (Album & {
+        trackCount: number;
+        type: "single" | "ep" | "album";
+      })[];
       singles: (Track & { reaction: "like" | "dislike" | null })[];
     }
   | undefined {
@@ -762,9 +817,10 @@ export function getArtistById(
   const randomTracks = db
     .prepare(
       `
-      SELECT t.*, r.type as reaction
+      SELECT t.*, r.type as reaction, ar.name as artistName
       FROM tracks t
       LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists ar ON t.artistId = ar.id
       WHERE t.artistId = ?
       ORDER BY RANDOM()
       LIMIT 5
@@ -772,35 +828,51 @@ export function getArtistById(
     )
     .all(userId, artistId) as (Track & {
     reaction: "like" | "dislike" | null;
+    artistName: string | null;
   })[];
 
-  // Get all albums with track counts
+  // Get all albums with track counts and classify them
   const albums = db
     .prepare(
       `
-      SELECT a.*, COUNT(t.id) as trackCount
-      FROM albums a
-      LEFT JOIN tracks t ON t.albumId = a.id
-      WHERE a.artistId = ?
-      GROUP BY a.id
-      ORDER BY a.year DESC, a.title ASC
+      WITH album_tracks AS (
+        SELECT a.*, COUNT(t.id) as trackCount
+        FROM albums a
+        LEFT JOIN tracks t ON t.albumId = a.id
+        WHERE a.artistId = ?
+        GROUP BY a.id
+      )
+      SELECT 
+        *,
+        CASE 
+          WHEN trackCount <= 3 THEN 'single'
+          WHEN trackCount <= 6 THEN 'ep'
+          ELSE 'album'
+        END as type
+      FROM album_tracks
+      ORDER BY title ASC
     `
     )
-    .all(artistId) as (Album & { trackCount: number })[];
+    .all(artistId) as (Album & {
+    trackCount: number;
+    type: "single" | "ep" | "album";
+  })[];
 
   // Get singles (tracks without albums)
   const singles = db
     .prepare(
       `
-      SELECT t.*, r.type as reaction
+      SELECT t.*, r.type as reaction, ar.name as artistName
       FROM tracks t
       LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists ar ON t.artistId = ar.id
       WHERE t.artistId = ? AND t.albumId IS NULL
       ORDER BY t.createdAt DESC
     `
     )
     .all(userId, artistId) as (Track & {
     reaction: "like" | "dislike" | null;
+    artistName: string | null;
   })[];
 
   return {
@@ -904,13 +976,17 @@ export function getShuffledArtistTracks(
   artistId: number,
   userId: number | null,
   limit: number = 50
-): (Track & { reaction: "like" | "dislike" | null })[] {
+): (Track & {
+  reaction: "like" | "dislike" | null;
+  artistName: string | null;
+})[] {
   if (!userId) {
     return db
       .prepare(
         `
-        SELECT t.*, NULL as reaction
+        SELECT t.*, NULL as reaction, ar.name as artistName
         FROM tracks t
+        LEFT JOIN artists ar ON t.artistId = ar.id
         WHERE t.artistId = ?
         ORDER BY RANDOM()
         LIMIT ?
@@ -918,15 +994,17 @@ export function getShuffledArtistTracks(
       )
       .all(artistId, limit) as (Track & {
       reaction: "like" | "dislike" | null;
+      artistName: string | null;
     })[];
   }
 
   return db
     .prepare(
       `
-      SELECT t.*, r.type as reaction
+      SELECT t.*, r.type as reaction, ar.name as artistName
       FROM tracks t
       LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists ar ON t.artistId = ar.id
       WHERE t.artistId = ?
       ORDER BY RANDOM()
       LIMIT ?
@@ -934,5 +1012,6 @@ export function getShuffledArtistTracks(
     )
     .all(userId, artistId, limit) as (Track & {
     reaction: "like" | "dislike" | null;
+    artistName: string | null;
   })[];
 }
