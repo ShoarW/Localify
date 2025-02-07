@@ -24,7 +24,7 @@ import React from "react";
 import { ArtistsPage } from "./components/localify/artists-page";
 import { ArtistPage } from "./components/localify/artist-page";
 import { getUser } from "./utils/auth";
-import { SearchContext } from "./contexts/search-context";
+import { PlayerProvider } from "./hooks/use-player";
 
 // Create a context for the search modal
 export const SearchContext = React.createContext<{
@@ -228,22 +228,24 @@ const AppLayout = () => {
 function App() {
   return (
     <Router>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap"
-        rel="stylesheet"
-      />
-      <Routes>
-        <Route path="/auth/login" element={<LoginPage />} />
-        <Route path="/auth/register" element={<RegisterPage />} />
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
+      <PlayerProvider>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap"
+          rel="stylesheet"
         />
-      </Routes>
+        <Routes>
+          <Route path="/auth/login" element={<LoginPage />} />
+          <Route path="/auth/register" element={<RegisterPage />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </PlayerProvider>
     </Router>
   );
 }

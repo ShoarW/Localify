@@ -18,6 +18,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { api, Track } from "../../services/api";
 import { Link } from "react-router-dom";
+import { usePlayer } from "../../hooks/use-player";
 
 // Add these props to the MusicPlayer component
 interface MusicPlayerProps {
@@ -36,10 +37,11 @@ export const MusicPlayer = ({
   setIsPlaying,
 }: MusicPlayerProps) => {
   const audioRef = useRef(new Audio());
+  const { volume: savedVolume, setVolume: setSavedVolume } = usePlayer();
 
   // State
   const [isLoading, setIsLoading] = useState(false);
-  const [volume, setVolume] = useState(70);
+  const [volume, setVolume] = useState(savedVolume);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
@@ -387,6 +389,12 @@ export const MusicPlayer = ({
       document.title = "Localify";
     }
   }, [currentTrackIndex, playlist, isPlaying]);
+
+  // Update audio volume when volume state changes
+  useEffect(() => {
+    audioRef.current.volume = volume / 100;
+    setSavedVolume(volume);
+  }, [volume, setSavedVolume]);
 
   return (
     <div className="h-24 bg-black/30 backdrop-blur-xl border-t border-white/10 flex items-center px-4 relative">

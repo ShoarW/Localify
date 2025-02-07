@@ -23,23 +23,78 @@ export const decodeToken = (token: string): DecodedToken | null => {
   }
 };
 
-export const getUser = (): {
+export const isTokenExpired = (token: string): boolean => {
+  const decoded = decodeToken(token);
+  if (!decoded || !decoded.exp) return true;
+
+  const currentTime = Math.floor(Date.now() / 1000);
+  return decoded.exp < currentTime;
+};
+
+export const clearAuth = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("refreshToken");
+  // Redirect to login page
+  window.location.href = "/login";
+};
+
+export const validateToken = async (): Promise<boolean> => {
+  const accessToken = localStorage.getItem("token");
+  const refreshToken = localStorage.getItem("refreshToken");
+
+  // If no tokens exist, clear auth and redirect
+  if (!accessToken || !refreshToken) {
+    clearAuth();
+    return false;
+  }
+
+  // If access token is still valid, return true
+  if (!isTokenExpired(accessToken)) {
+    return true;
+  }
+
+  // If refresh token is expired, clear auth and redirect
+  if (isTokenExpired(refreshToken)) {
+    clearAuth();
+    return false;
+  }
+
+  // Try to refresh the access token
+  try {
+    const response = await fetch("http://localhost:3000/auth/refresh", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${refreshToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to refresh token");
+    }
+
+    const data = await response.json();
+    localStorage.setItem("token", data.accessToken);
+    return true;
+  } catch (error) {
+    clearAuth();
+    return false;
+  }
+};
+
+export const getUser = async (): Promise<{
   id: number;
   username: string;
   isAdmin: boolean;
-} | null => {
+} | null> => {
+  // Validate token before proceeding
+  const isValid = await validateToken();
+  if (!isValid) return null;
+
   const token = localStorage.getItem("token");
   if (!token) return null;
 
   const decoded = decodeToken(token);
   if (!decoded) return null;
-
-  // Check if token is expired
-  const currentTime = Math.floor(Date.now() / 1000);
-  if (decoded.exp && decoded.exp < currentTime) {
-    localStorage.removeItem("token");
-    return null;
-  }
 
   return {
     id: decoded.sub,

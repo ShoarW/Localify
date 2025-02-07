@@ -1,3 +1,5 @@
+import { validateToken, clearAuth } from "../utils/auth";
+
 export interface Track {
   id: number;
   title: string;
@@ -45,12 +47,8 @@ export interface RegisterCredentials {
 }
 
 export interface AuthResponse {
-  token: string;
-  user: {
-    id: number;
-    username: string;
-    email: string;
-  };
+  accessToken: string;
+  refreshToken: string;
 }
 
 export type ReactionType = "like" | "dislike" | null;
@@ -133,17 +131,60 @@ export interface ArtistDetails {
 
 const API_BASE_URL = "http://localhost:3000";
 
+// Add token refresh function
+const refreshAccessToken = async (refreshToken: string): Promise<string> => {
+  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${refreshToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to refresh token");
+  }
+
+  const data = await response.json();
+  return data.accessToken;
+};
+
+// Add request interceptor
+const fetchWithToken = async (
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> => {
+  // Validate token before making the request
+  const isValid = await validateToken();
+  if (!isValid) {
+    throw new Error("Session expired. Please login again.");
+  }
+
+  const accessToken = localStorage.getItem("token");
+
+  // Add access token to request
+  const headers = {
+    ...options.headers,
+    Authorization: `Bearer ${accessToken}`,
+  };
+
+  // Make the request
+  const response = await fetch(url, { ...options, headers });
+
+  // If we get a 401, the token might have expired just now
+  if (response.status === 401) {
+    clearAuth(); // This will redirect to login
+    throw new Error("Session expired. Please login again.");
+  }
+
+  return response;
+};
+
 export const api = {
   /**
    * Fetches all tracks from the server
    */
   getTracks: async (): Promise<Track[]> => {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/tracks`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await fetchWithToken(`${API_BASE_URL}/tracks`);
     if (!response.ok) {
       throw new Error("Failed to fetch tracks");
     }
@@ -190,23 +231,13 @@ export const api = {
 
   // Album endpoints
   getAlbums: async (): Promise<Album[]> => {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/albums`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await fetchWithToken(`${API_BASE_URL}/albums`);
     if (!response.ok) throw new Error("Failed to fetch albums");
     return response.json();
   },
 
   getAlbum: async (id: number): Promise<AlbumWithTracks> => {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/albums/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await fetchWithToken(`${API_BASE_URL}/albums/${id}`);
     if (!response.ok) throw new Error("Failed to fetch album");
     return response.json();
   },
@@ -229,7 +260,10 @@ export const api = {
       throw new Error("Login failed");
     }
 
-    return response.json();
+    const data = await response.json();
+    localStorage.setItem("token", data.accessToken);
+    localStorage.setItem("refreshToken", data.refreshToken);
+    return data;
   },
 
   register: async (credentials: RegisterCredentials): Promise<AuthResponse> => {

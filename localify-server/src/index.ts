@@ -4,7 +4,11 @@ import type { Context, Next } from "hono";
 
 import { initializeDatabase } from "./db/db.js";
 import dotenv from "dotenv";
-import { loginHandler, signupHandler } from "./controllers/auth.controller.js";
+import {
+  loginHandler,
+  signupHandler,
+  refreshTokenHandler,
+} from "./controllers/auth.controller.js";
 import {
   getAllTracksHandler,
   getTrackByIdHandler,
@@ -65,6 +69,7 @@ async function optionalAuthMiddleware(c: Context, next: Next) {
 // -- Auth -- //
 app.post("/auth/login", loginHandler);
 app.post("/auth/signup", signupHandler);
+app.post("/auth/refresh", refreshTokenHandler);
 
 // -- Tracks -- //
 app.get("/tracks", optionalAuthMiddleware, getAllTracksHandler);

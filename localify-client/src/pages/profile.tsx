@@ -7,6 +7,7 @@ interface UserProfile {
   id: number;
   username: string;
   isAdmin: boolean;
+  role: string;
 }
 
 interface IndexingResults {
@@ -33,10 +34,18 @@ export const ProfilePage = () => {
   });
 
   useEffect(() => {
-    const userData = getUser();
-    if (userData) {
-      setUser(userData);
-    }
+    const loadUser = async () => {
+      const userData = await getUser();
+      if (userData) {
+        setUser({
+          id: userData.id,
+          username: userData.username,
+          isAdmin: userData.isAdmin,
+          role: userData.isAdmin ? "Administrator" : "User",
+        });
+      }
+    };
+    loadUser();
   }, []);
 
   const handleForceIndex = async () => {
@@ -130,11 +139,18 @@ export const ProfilePage = () => {
               <h2 className="text-2xl font-bold text-white mb-2">
                 {user.username}
               </h2>
-              {user.isAdmin && (
-                <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500">
-                  Admin
+              <div className="flex flex-col gap-2">
+                <span className="text-white/60">ID: {user.id}</span>
+                <span
+                  className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                    user.isAdmin
+                      ? "bg-red-500/10 text-red-500"
+                      : "bg-blue-500/10 text-blue-500"
+                  }`}
+                >
+                  {user.role}
                 </span>
-              )}
+              </div>
             </div>
           </div>
 

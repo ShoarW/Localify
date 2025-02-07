@@ -45,14 +45,22 @@ export const Sidebar = ({ playlists }: SidebarProps) => {
   }, [openSearch]);
 
   useEffect(() => {
-    const userData = getUser();
-    if (userData) {
-      setUser(userData);
-    }
+    const loadUser = async () => {
+      const userData = await getUser();
+      if (userData) {
+        setUser({
+          id: userData.id,
+          username: userData.username,
+          isAdmin: userData.isAdmin,
+        });
+      }
+    };
+    loadUser();
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
     setUser(null);
     navigate("/auth/login");
   };

@@ -1,6 +1,10 @@
 // src/api/controllers/auth.controller.ts
 import type { Context } from "hono";
-import { authenticateUser, signupUser } from "../services/user.service.js";
+import {
+  authenticateUser,
+  refreshAccessToken,
+  signupUser,
+} from "../services/user.service.js";
 import type { SignupUser } from "../types/model.js";
 
 export async function loginHandler(c: Context) {
@@ -18,6 +22,20 @@ export async function loginHandler(c: Context) {
   }
 
   return c.json(authResult);
+}
+
+export async function refreshTokenHandler(c: Context) {
+  const refreshToken = c.req.header("Authorization")?.split(" ")[1]; // Bearer token
+  if (!refreshToken) {
+    return c.json({ error: "No refresh token provided" }, 401);
+  }
+
+  const result = await refreshAccessToken(refreshToken);
+  if (!result) {
+    return c.json({ error: "Invalid or expired refresh token" }, 401);
+  }
+
+  return c.json(result);
 }
 
 export async function signupHandler(c: Context) {
