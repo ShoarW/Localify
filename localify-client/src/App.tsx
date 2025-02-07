@@ -115,16 +115,11 @@ const AppLayout = () => {
               path="/"
               element={
                 <MainContent
-                  tracks={allTracks}
-                  currentTrackIndex={currentTrackIndex}
-                  isPlaying={isPlaying}
-                  onTrackSelect={(index: number) => {
-                    setCurrentPlaylist(allTracks);
-                    setCurrentTrackId(allTracks[index].id);
-                    setIsPlaying(true);
-                  }}
+                  onPlayTrack={handlePlayTrack}
                   playlists={playlists}
                   onPlaylistsChange={setPlaylists}
+                  currentTrackId={currentTrackId}
+                  isPlaying={isPlaying}
                 />
               }
             />

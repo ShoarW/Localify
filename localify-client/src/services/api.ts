@@ -129,6 +129,49 @@ export interface ArtistDetails {
   albums: Album[];
 }
 
+export interface NewRelease {
+  id: number;
+  title: string;
+  artist: string | null;
+  type: "single" | "ep" | "album";
+  hasImage: boolean;
+}
+
+export interface QuickPick {
+  id: number;
+  title: string;
+  artistName: string | null;
+  reaction: ReactionType;
+  duration: number;
+  album: string;
+  albumId: number;
+  hasImage: boolean;
+}
+
+export interface ListenAgainTrack {
+  id: number;
+  title: string;
+  artistName: string | null;
+  lastPlayed: number;
+  duration: number;
+  album: string;
+  albumId: number;
+  hasImage: boolean;
+}
+
+export interface HomeContent {
+  newReleases: NewRelease[];
+  quickPicks: QuickPick[];
+  listenAgain: ListenAgainTrack[];
+  featuredPlaylists: Playlist[];
+}
+
+export interface HomeOptions {
+  newReleasesLimit?: number;
+  quickPicksLimit?: number;
+  listenAgainLimit?: number;
+}
+
 const API_BASE_URL = "http://localhost:3000";
 
 // Add token refresh function
@@ -548,6 +591,27 @@ export const api = {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
     if (!response.ok) throw new Error("Failed to fetch shuffled tracks");
+    return response.json();
+  },
+
+  // Home endpoint
+  getHomeContent: async (options?: HomeOptions): Promise<HomeContent> => {
+    const params = new URLSearchParams();
+    if (options?.newReleasesLimit)
+      params.append("newReleasesLimit", options.newReleasesLimit.toString());
+    if (options?.quickPicksLimit)
+      params.append("quickPicksLimit", options.quickPicksLimit.toString());
+    if (options?.listenAgainLimit)
+      params.append("listenAgainLimit", options.listenAgainLimit.toString());
+
+    const response = await fetchWithToken(
+      `${API_BASE_URL}/home${params.toString() ? `?${params.toString()}` : ""}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch home content");
+    }
+
     return response.json();
   },
 };

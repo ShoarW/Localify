@@ -40,6 +40,9 @@ import {
   incrementPlayCount as dbIncrementPlayCount,
   getPlayCount as dbGetPlayCount,
   getTopPlayedTracks as dbGetTopPlayedTracks,
+  getNewReleases as dbGetNewReleases,
+  getQuickPicks as dbGetQuickPicks,
+  getListenAgain as dbGetListenAgain,
 } from "../db/track.db.js";
 import type { Track, Album, Playlist } from "../types/model.js";
 import mime from "mime-types";
@@ -546,4 +549,44 @@ export async function getTopPlayedTracks(
   limit: number = 50
 ): Promise<(Track & { playCount: number; lastPlayed: number })[]> {
   return dbGetTopPlayedTracks(db, userId, limit);
+}
+
+export async function getHomePageContent(
+  userId: number | null,
+  options: {
+    newReleasesLimit?: number;
+    quickPicksLimit?: number;
+    listenAgainLimit?: number;
+  } = {}
+): Promise<{
+  newReleases: (Album & {
+    artist: string | null;
+    type: "single" | "ep" | "album";
+    hasImage: boolean;
+  })[];
+  quickPicks: (Track & {
+    reaction: "like" | "dislike" | null;
+    artistName: string | null;
+  })[];
+  listenAgain: (Track & { lastPlayed: number; artistName: string | null })[];
+  featuredPlaylists: any[]; // For future implementation
+}> {
+  const {
+    newReleasesLimit = 10,
+    quickPicksLimit = 10,
+    listenAgainLimit = 10,
+  } = options;
+
+  const newReleases = dbGetNewReleases(db, newReleasesLimit);
+  const quickPicks = dbGetQuickPicks(db, userId, quickPicksLimit);
+  const listenAgain = userId
+    ? dbGetListenAgain(db, userId, listenAgainLimit)
+    : [];
+
+  return {
+    newReleases,
+    quickPicks,
+    listenAgain,
+    featuredPlaylists: [], // Empty for now
+  };
 }

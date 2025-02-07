@@ -1249,3 +1249,121 @@ export function getTopPlayedTracks(
     lastPlayed: number;
   })[];
 }
+
+export function getNewReleases(
+  db: Database,
+  limit: number = 10
+): (Album & {
+  artist: string | null;
+  type: "single" | "ep" | "album";
+  hasImage: boolean;
+})[] {
+  return db
+    .prepare(
+      `
+      WITH album_tracks AS (
+        SELECT 
+          a.id,
+          a.title,
+          a.artistId,
+          ar.name as artist,
+          CASE WHEN a.coverPath IS NOT NULL THEN 1 ELSE 0 END as hasImage,
+          COUNT(t.id) as trackCount
+        FROM albums a
+        LEFT JOIN artists ar ON a.artistId = ar.id
+        LEFT JOIN tracks t ON t.albumId = a.id
+        GROUP BY a.id
+      )
+      SELECT 
+        *,
+        CASE 
+          WHEN trackCount <= 3 THEN 'single'
+          WHEN trackCount <= 6 THEN 'ep'
+          ELSE 'album'
+        END as type
+      FROM album_tracks
+      ORDER BY id DESC
+      LIMIT ?
+    `
+    )
+    .all(limit) as (Album & {
+    artist: string | null;
+    type: "single" | "ep" | "album";
+    hasImage: boolean;
+  })[];
+}
+
+export function getQuickPicks(
+  db: Database,
+  userId: number | null,
+  limit: number = 10
+): (Track & {
+  reaction: "like" | "dislike" | null;
+  artistName: string | null;
+})[] {
+  // For now, return random tracks, but this could be improved with actual recommendations
+  if (!userId) {
+    return db
+      .prepare(
+        `
+        SELECT 
+          t.*,
+          NULL as reaction,
+          ar.name as artistName
+        FROM tracks t
+        LEFT JOIN artists ar ON t.artistId = ar.id
+        ORDER BY RANDOM()
+        LIMIT ?
+      `
+      )
+      .all(limit) as (Track & {
+      reaction: "like" | "dislike" | null;
+      artistName: string | null;
+    })[];
+  }
+
+  return db
+    .prepare(
+      `
+      SELECT 
+        t.*,
+        r.type as reaction,
+        ar.name as artistName
+      FROM tracks t
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists ar ON t.artistId = ar.id
+      ORDER BY RANDOM()
+      LIMIT ?
+    `
+    )
+    .all(userId, limit) as (Track & {
+    reaction: "like" | "dislike" | null;
+    artistName: string | null;
+  })[];
+}
+
+export function getListenAgain(
+  db: Database,
+  userId: number,
+  limit: number = 10
+): (Track & { lastPlayed: number; artistName: string | null })[] {
+  return db
+    .prepare(
+      `
+      SELECT 
+        t.*,
+        pc.lastPlayed,
+        ar.name as artistName
+      FROM tracks t
+      JOIN play_counts pc ON pc.trackId = t.id
+      LEFT JOIN artists ar ON t.artistId = ar.id
+      WHERE pc.userId = ?
+      ORDER BY pc.lastPlayed DESC
+      LIMIT ?
+    `
+    )
+    .all(userId, limit) as (Track & {
+    lastPlayed: number;
+    artistName: string | null;
+  })[];
+}

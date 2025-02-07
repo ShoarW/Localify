@@ -37,6 +37,7 @@ import {
   getShuffledArtistTracksHandler,
   getPlayCountHandler,
   getTopPlayedTracksHandler,
+  getHomePageHandler,
 } from "./controllers/track.controller.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { permissionMiddleware } from "./middleware/permission.js";
@@ -70,6 +71,9 @@ async function optionalAuthMiddleware(c: Context, next: Next) {
 app.post("/auth/login", loginHandler);
 app.post("/auth/signup", signupHandler);
 app.post("/auth/refresh", refreshTokenHandler);
+
+// -- Homepage -- //
+app.get("/home", optionalAuthMiddleware, getHomePageHandler);
 
 // -- Tracks -- //
 app.get("/tracks", optionalAuthMiddleware, getAllTracksHandler);

@@ -26,6 +26,7 @@ import {
   incrementPlayCount,
   getPlayCount,
   getTopPlayedTracks,
+  getHomePageContent,
 } from "../services/track.service.js";
 import { config } from "../config.js";
 import fs from "fs";
@@ -845,5 +846,38 @@ export async function getTopPlayedTracksHandler(c: Context) {
   } catch (error) {
     console.error("Error getting top played tracks:", error);
     return c.json({ error: "Failed to get top played tracks" }, 500);
+  }
+}
+
+export async function getHomePageHandler(c: Context) {
+  const userId = c.get("userId") as number | null;
+
+  // Get optional limit parameters
+  const newReleasesLimit = parseInt(c.req.query("newReleasesLimit") || "10");
+  const quickPicksLimit = parseInt(c.req.query("quickPicksLimit") || "10");
+  const listenAgainLimit = parseInt(c.req.query("listenAgainLimit") || "10");
+
+  // Validate limits
+  if (
+    [newReleasesLimit, quickPicksLimit, listenAgainLimit].some(
+      (limit) => isNaN(limit) || limit < 1 || limit > 50
+    )
+  ) {
+    return c.json(
+      { error: "Invalid limit parameter (must be between 1 and 50)" },
+      400
+    );
+  }
+
+  try {
+    const content = await getHomePageContent(userId, {
+      newReleasesLimit,
+      quickPicksLimit,
+      listenAgainLimit,
+    });
+    return c.json(content);
+  } catch (error) {
+    console.error("Error getting homepage content:", error);
+    return c.json({ error: "Failed to get homepage content" }, 500);
   }
 }
