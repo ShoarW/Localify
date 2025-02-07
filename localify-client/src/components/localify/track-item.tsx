@@ -6,6 +6,7 @@ import {
   MoreHorizontal,
   PlusCircle,
   ListMusic,
+  Music,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ReactionType, Playlist, api } from "../../services/api";
@@ -25,6 +26,8 @@ interface TrackItemProps {
   onReactionUpdate?: (trackId: number, reaction: ReactionType) => void;
   playlists: Playlist[];
   onPlaylistsChange?: (playlists: Playlist[]) => void;
+  showArt?: boolean;
+  albumId?: number;
 }
 
 export const TrackItem = ({
@@ -40,6 +43,8 @@ export const TrackItem = ({
   onReactionUpdate,
   playlists,
   onPlaylistsChange,
+  showArt,
+  albumId,
 }: TrackItemProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
@@ -138,23 +143,52 @@ export const TrackItem = ({
         }}
       >
         <div className="flex items-center gap-4">
-          <div className="w-8 text-center text-sm text-white/40 group-hover:text-white/60">
-            {isActive ? (
-              isPlaying ? (
-                <div className="w-4 h-4 mx-auto rounded-sm bg-gradient-to-r from-red-500 to-rose-600 animate-pulse" />
+          {showArt ? (
+            <div className="w-12 h-12 rounded-lg bg-white/5 overflow-hidden flex-shrink-0">
+              {albumId ? (
+                <img
+                  src={api.getAlbumCoverUrl(albumId)}
+                  alt={title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                    target.parentElement?.classList.add(
+                      "flex",
+                      "items-center",
+                      "justify-center"
+                    );
+                    const icon = document.createElement("div");
+                    icon.innerHTML =
+                      '<svg class="w-6 h-6 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
+                    target.parentElement?.appendChild(icon);
+                  }}
+                />
               ) : (
-                <Pause className="w-4 h-4 mx-auto text-white" fill="white" />
-              )
-            ) : (
-              <span className="group-hover:hidden">{number}</span>
-            )}
-            {!isActive && (
-              <Play
-                className="w-4 h-4 mx-auto text-white hidden group-hover:block"
-                fill="white"
-              />
-            )}
-          </div>
+                <div className="w-full h-full flex items-center justify-center">
+                  <Music className="w-6 h-6 text-white/40" />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="w-8 text-center text-sm text-white/40 group-hover:text-white/60">
+              {isActive ? (
+                isPlaying ? (
+                  <div className="w-4 h-4 mx-auto rounded-sm bg-gradient-to-r from-red-500 to-rose-600 animate-pulse" />
+                ) : (
+                  <Pause className="w-4 h-4 mx-auto text-white" fill="white" />
+                )
+              ) : (
+                <span className="group-hover:hidden">{number}</span>
+              )}
+              {!isActive && (
+                <Play
+                  className="w-4 h-4 mx-auto text-white hidden group-hover:block"
+                  fill="white"
+                />
+              )}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p
               className={`text-sm font-medium truncate ${

@@ -113,6 +113,8 @@ export const MainContent = ({
                 onPlaylistsChange={onPlaylistsChange}
                 isActive={currentTrackId === track.id}
                 isPlaying={isPlaying && currentTrackId === track.id}
+                showArt={true}
+                albumId={track.albumId}
               />
             ))}
           </div>
