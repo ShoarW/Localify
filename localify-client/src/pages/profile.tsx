@@ -17,12 +17,25 @@ interface IndexingResults {
   unchanged: Track[];
 }
 
+interface IndexingProgress {
+  type: "scanning" | "processing" | "cleanup";
+  total?: number;
+  current: number;
+  currentFile?: string;
+  added: number;
+  removed: number;
+  unchanged: number;
+  status: "progress" | "complete";
+}
+
 export const ProfilePage = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isIndexing, setIsIndexing] = useState(false);
   const [indexingError, setIndexingError] = useState<string | null>(null);
   const [indexingResults, setIndexingResults] =
     useState<IndexingResults | null>(null);
+  const [indexingProgress, setIndexingProgress] =
+    useState<IndexingProgress | null>(null);
   const [expandedSections, setExpandedSections] = useState<{
     added: boolean;
     removed: boolean;
@@ -52,13 +65,30 @@ export const ProfilePage = () => {
     setIsIndexing(true);
     setIndexingError(null);
     setIndexingResults(null);
+    setIndexingProgress(null);
 
     try {
-      const results = await api.forceIndex();
-      setIndexingResults(results);
+      await api.forceIndex((update) => {
+        setIndexingProgress(update);
+
+        if (
+          update.status === "complete" &&
+          update.addedTracks &&
+          update.removedTracks &&
+          update.unchangedTracks
+        ) {
+          setIndexingResults({
+            message: update.message || "Indexing complete",
+            added: update.addedTracks,
+            removed: update.removedTracks,
+            unchanged: update.unchangedTracks,
+          });
+          setIsIndexing(false);
+        }
+      });
     } catch (error) {
-      setIndexingError("Failed to start indexing. Please try again.");
-    } finally {
+      console.error("Error:", error);
+      setIndexingError("Failed to complete indexing. Please try again.");
       setIsIndexing(false);
     }
   };
@@ -123,6 +153,94 @@ export const ProfilePage = () => {
     );
   };
 
+  const renderProgress = () => {
+    if (!indexingProgress) return null;
+
+    let progressText = "";
+    let progressPercentage = 0;
+    let statusColor = "";
+
+    switch (indexingProgress.type) {
+      case "scanning":
+        progressText = "Scanning music directory...";
+        progressPercentage = 0;
+        statusColor = "text-blue-500";
+        break;
+      case "processing":
+        progressText = `Processing files (${indexingProgress.current}/${indexingProgress.total})`;
+        progressPercentage = indexingProgress.total
+          ? (indexingProgress.current / indexingProgress.total) * 100
+          : 0;
+        statusColor = "text-amber-500";
+        break;
+      case "cleanup":
+        progressText = `Cleaning up library (${indexingProgress.current}/${indexingProgress.total})`;
+        progressPercentage = indexingProgress.total
+          ? (indexingProgress.current / indexingProgress.total) * 100
+          : 0;
+        statusColor = "text-purple-500";
+        break;
+    }
+
+    return (
+      <div className="mt-4 space-y-4">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2">
+              <span className={`font-medium ${statusColor}`}>
+                {indexingProgress.type.charAt(0).toUpperCase() +
+                  indexingProgress.type.slice(1)}
+              </span>
+              <span className="text-white/60">{progressText}</span>
+            </div>
+            <span className="text-white/60">
+              {Math.round(progressPercentage)}%
+            </span>
+          </div>
+          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-red-500 to-rose-600 transition-all duration-300"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+        </div>
+
+        {indexingProgress.currentFile && (
+          <div className="bg-white/5 rounded-lg p-3">
+            <p className="text-sm text-white/60 mb-1">Current File</p>
+            <p className="text-sm text-white font-medium truncate">
+              {indexingProgress.currentFile}
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-green-500/10 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <p className="text-green-500 font-medium">Added</p>
+            </div>
+            <p className="text-2xl text-white">{indexingProgress.added}</p>
+          </div>
+          <div className="bg-red-500/10 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <p className="text-red-500 font-medium">Removed</p>
+            </div>
+            <p className="text-2xl text-white">{indexingProgress.removed}</p>
+          </div>
+          <div className="bg-blue-500/10 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <p className="text-blue-500 font-medium">Unchanged</p>
+            </div>
+            <p className="text-2xl text-white">{indexingProgress.unchanged}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (!user) return null;
 
   return (
@@ -180,11 +298,14 @@ export const ProfilePage = () => {
                       </>
                     )}
                   </button>
+
                   {indexingError && (
                     <p className="mt-2 text-red-500 text-sm">{indexingError}</p>
                   )}
 
-                  {indexingResults && (
+                  {isIndexing && renderProgress()}
+
+                  {indexingResults && !isIndexing && (
                     <div className="mt-6 bg-white/5 rounded-xl p-6">
                       <p className="text-white font-medium mb-6">
                         {indexingResults.message}

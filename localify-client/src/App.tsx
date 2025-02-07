@@ -23,7 +23,6 @@ import { SearchModal } from "./components/localify/search-modal";
 import React from "react";
 import { ArtistsPage } from "./components/localify/artists-page";
 import { ArtistPage } from "./components/localify/artist-page";
-import { getUser } from "./utils/auth";
 import { PlayerProvider } from "./hooks/use-player";
 import { Menu } from "lucide-react";
 
@@ -50,8 +49,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // App Layout component
 const AppLayout = () => {
-  // All available tracks
-  const [allTracks, setAllTracks] = useState<Track[]>([]);
   // Current playlist being played
   const [currentPlaylist, setCurrentPlaylist] = useState<Track[]>([]);
   const [currentTrackId, setCurrentTrackId] = useState<number | null>(null);

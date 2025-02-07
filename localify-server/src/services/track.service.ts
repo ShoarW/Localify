@@ -96,7 +96,18 @@ async function findCoverArtInDirectory(
   }
 }
 
-export async function indexDirectory(directoryPath: string): Promise<{
+export async function indexDirectory(
+  directoryPath: string,
+  progressCallback?: (progress: {
+    type: "scanning" | "processing" | "cleanup";
+    total?: number;
+    current: number;
+    currentFile?: string;
+    added: number;
+    removed: number;
+    unchanged: number;
+  }) => void
+): Promise<{
   added: Track[];
   removed: Track[];
   unchanged: Track[];
@@ -104,39 +115,97 @@ export async function indexDirectory(directoryPath: string): Promise<{
   const added: Track[] = [];
   const removed: Track[] = [];
   const unchanged: Track[] = [];
+  const BATCH_SIZE = 50; // Process files in batches of 50
 
+  // First, scan all files
+  progressCallback?.({
+    type: "scanning",
+    current: 0,
+    added: 0,
+    removed: 0,
+    unchanged: 0,
+  });
   const currentFiles = await getAllMusicFiles(directoryPath);
   const existingTracks = await dbGetAllTracks(db);
   const existingTrackPaths = new Set(existingTracks.map((track) => track.path));
 
+  // Process files in batches
+  const filesToProcess = currentFiles.filter(
+    (filePath) => !existingTrackPaths.has(filePath)
+  );
+  const totalFiles = filesToProcess.length;
+
+  // Process new files in batches
+  for (let i = 0; i < filesToProcess.length; i += BATCH_SIZE) {
+    const batch = filesToProcess.slice(i, i + BATCH_SIZE);
+
+    // Process batch sequentially
+    for (const filePath of batch) {
+      try {
+        await addTrack(filePath);
+        const addedTrack = await getTrackByPath(filePath);
+        if (addedTrack) {
+          added.push(addedTrack);
+        }
+        progressCallback?.({
+          type: "processing",
+          total: totalFiles,
+          current: i + added.length,
+          currentFile: filePath,
+          added: added.length,
+          removed: removed.length,
+          unchanged: unchanged.length,
+        });
+      } catch (error) {
+        console.error(`Error processing file ${filePath}:`, error);
+      }
+    }
+  }
+
+  // Add unchanged tracks
   for (const filePath of currentFiles) {
     if (existingTrackPaths.has(filePath)) {
       const existingTrack = existingTracks.find((t) => t.path === filePath)!;
       unchanged.push(existingTrack);
       existingTrackPaths.delete(filePath);
-    } else {
-      try {
-        await addTrack(filePath); // Use the service function
-        const addedTrack = await getTrackByPath(filePath); //use the service function
-        if (addedTrack) {
-          added.push(addedTrack);
+    }
+  }
+
+  // Process removals in batches
+  const pathsToRemove = Array.from(existingTrackPaths);
+  for (let i = 0; i < pathsToRemove.length; i += BATCH_SIZE) {
+    const batch = pathsToRemove.slice(i, i + BATCH_SIZE);
+
+    progressCallback?.({
+      type: "cleanup",
+      total: pathsToRemove.length,
+      current: i,
+      added: added.length,
+      removed: removed.length,
+      unchanged: unchanged.length,
+    });
+
+    // Process removals sequentially as well
+    for (const pathToRemove of batch) {
+      const trackToDelete = existingTracks.find((t) => t.path === pathToRemove);
+      if (trackToDelete && trackToDelete.id) {
+        const deleted = await deleteTrack(trackToDelete.id);
+        if (deleted) {
+          removed.push(trackToDelete);
         }
-      } catch (error) {
-        console.error(`Error processing file ${filePath}:`, error);
-        // Consider: Throw, continue, log?
       }
     }
   }
 
-  for (const pathToRemove of existingTrackPaths) {
-    const trackToDelete = existingTracks.find((t) => t.path === pathToRemove);
-    if (trackToDelete && trackToDelete.id) {
-      const deleted = await deleteTrack(trackToDelete.id); // Use service function
-      if (deleted) {
-        removed.push(trackToDelete);
-      }
-    }
-  }
+  // Final progress update
+  progressCallback?.({
+    type: "cleanup",
+    total: pathsToRemove.length,
+    current: pathsToRemove.length,
+    added: added.length,
+    removed: removed.length,
+    unchanged: unchanged.length,
+  });
 
   return { added, removed, unchanged };
 }
@@ -196,7 +265,7 @@ export async function addTrack(filePath: string): Promise<void> {
     const metadata = await mm.parseFile(filePath);
     const mimeType = mime.lookup(filePath) || "application/octet-stream";
 
-    // Find or create artist
+    // Find or create artist for the track
     const artistId = await findOrCreateArtist(metadata.common.artist || null);
 
     // Try to find or create album if we have album metadata
@@ -205,7 +274,7 @@ export async function addTrack(filePath: string): Promise<void> {
       const albumTitle = cleanAlbumTitle(metadata.common.album);
       const directoryPath = path.dirname(filePath);
 
-      // Try to find existing album
+      // Try to find existing album by exact title match (case-insensitive)
       const existingAlbum = findAlbumByTitle(db, albumTitle);
 
       if (existingAlbum) {
@@ -225,7 +294,7 @@ export async function addTrack(filePath: string): Promise<void> {
         // Look for cover art in the album directory
         const coverPath = await findCoverArtInDirectory(directoryPath);
 
-        // Create new album
+        // Create new album with the track's artist
         const album: Omit<Album, "id"> = {
           title: albumTitle,
           artistId: artistId,
@@ -255,9 +324,29 @@ export async function addTrack(filePath: string): Promise<void> {
     // Check if the track already exists
     const existingTrack = dbGetTrackByPath(db, track.path);
     if (existingTrack) {
-      return; // Or update, depending on your needs
+      return; // Skip if track already exists
     }
+
+    // Add the track
     dbAddTrack(db, track);
+
+    // After adding the track, check if we need to update the album's artist to "Various Artists"
+    if (albumId) {
+      const albumTracks = db
+        .prepare(
+          "SELECT DISTINCT artistId FROM tracks WHERE albumId = ? AND artistId IS NOT NULL"
+        )
+        .all(albumId) as { artistId: number }[];
+
+      // If we have multiple different artists on this album
+      if (albumTracks.length > 1) {
+        const variousArtistsId = await findOrCreateArtist("Various Artists");
+        db.prepare("UPDATE albums SET artistId = ? WHERE id = ?").run(
+          variousArtistsId,
+          albumId
+        );
+      }
+    }
   } catch (error) {
     console.error(`Error adding track ${filePath}:`, error);
     throw error;

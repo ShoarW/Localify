@@ -78,13 +78,49 @@ export async function searchTracksHandler(c: Context) {
 
 export async function indexDirectoryHandler(c: Context) {
   try {
-    const result = await indexDirectory(config.MEDIA_PATH);
-    return c.json({
-      message: `Indexing complete.`,
-      added: result.added,
-      removed: result.removed,
-      unchanged: result.unchanged,
+    // Set streaming response headers
+    c.header("Content-Type", "text/event-stream");
+    c.header("Cache-Control", "no-cache");
+    c.header("Connection", "keep-alive");
+
+    // Create a readable stream that we can write to
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          // Helper function to send updates
+          const sendUpdate = async (data: any) => {
+            controller.enqueue(
+              new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`)
+            );
+          };
+
+          // Start indexing with progress callback
+          const result = await indexDirectory(
+            config.MEDIA_PATH,
+            async (progress) => {
+              await sendUpdate({
+                ...progress,
+                status: "progress",
+              });
+            }
+          );
+
+          // Send final result
+          await sendUpdate({
+            status: "complete",
+            message: "Indexing complete",
+            ...result,
+          });
+
+          controller.close();
+        } catch (error) {
+          console.error("Indexing error:", error);
+          controller.error(error);
+        }
+      },
     });
+
+    return c.body(readable);
   } catch (error) {
     console.error("Indexing error:", error);
     return c.json({ error: "Failed to index tracks." }, 500);

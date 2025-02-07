@@ -16,6 +16,7 @@ export interface Track {
   mimeType: string;
   createdAt: number;
   updatedAt: null;
+  path: string;
 }
 
 export interface Album {
@@ -326,12 +327,22 @@ export const api = {
   },
 
   // Admin endpoints
-  forceIndex: async (): Promise<{
-    message: string;
-    added: Track[];
-    removed: Track[];
-    unchanged: Track[];
-  }> => {
+  forceIndex: async (
+    onProgress: (update: {
+      type: "scanning" | "processing" | "cleanup";
+      total?: number;
+      current: number;
+      currentFile?: string;
+      added: number;
+      removed: number;
+      unchanged: number;
+      status: "progress" | "complete";
+      message?: string;
+      addedTracks?: Track[];
+      removedTracks?: Track[];
+      unchangedTracks?: Track[];
+    }) => void
+  ): Promise<void> => {
     const token = localStorage.getItem("token");
     const response = await fetch(`${API_BASE_URL}/index`, {
       method: "POST",
@@ -341,10 +352,97 @@ export const api = {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to start indexing");
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return response.json();
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        // Append new chunk to existing buffer
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete events in buffer
+        const lines = buffer.split("\n");
+        // Keep the last (potentially incomplete) line in buffer
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim() || !line.startsWith("data: ")) continue;
+
+          try {
+            const data = JSON.parse(line.slice(6)); // Remove 'data: ' prefix
+
+            if (data.status === "complete") {
+              onProgress({
+                status: "complete",
+                type: "cleanup", // Keep the last type
+                current: 0,
+                added: data.added.length,
+                removed: data.removed.length,
+                unchanged: data.unchanged.length,
+                message: data.message,
+                addedTracks: data.added,
+                removedTracks: data.removed,
+                unchangedTracks: data.unchanged,
+              });
+              return;
+            }
+
+            // Handle progress updates
+            switch (data.type) {
+              case "scanning":
+                onProgress({
+                  type: "scanning",
+                  current: 0,
+                  added: data.added,
+                  removed: data.removed,
+                  unchanged: data.unchanged,
+                  status: "progress",
+                });
+                break;
+
+              case "processing":
+                onProgress({
+                  type: "processing",
+                  total: data.total,
+                  current: data.current,
+                  currentFile: data.currentFile,
+                  added: data.added,
+                  removed: data.removed,
+                  unchanged: data.unchanged,
+                  status: "progress",
+                });
+                break;
+
+              case "cleanup":
+                onProgress({
+                  type: "cleanup",
+                  total: data.total,
+                  current: data.current,
+                  added: data.added,
+                  removed: data.removed,
+                  unchanged: data.unchanged,
+                  status: "progress",
+                });
+                break;
+            }
+          } catch (error) {
+            console.error("Error parsing progress update:", error, line);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Indexing error:", error);
+      throw error;
+    } finally {
+      reader.releaseLock();
+    }
   },
 
   // Reaction endpoints
