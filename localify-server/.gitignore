@@ -28,3 +28,5 @@ lerna-debug.log*
 .DS_Store
 /localify-media/*
 /localify-storage/*
+
+venv

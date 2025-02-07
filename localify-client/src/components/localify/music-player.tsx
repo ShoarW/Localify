@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, Track } from "../../services/api";
 import { Link } from "react-router-dom";
 import { usePlayer } from "../../hooks/use-player";
+import { updateFavicon } from "../../utils/favicon";
 
 // Add these props to the MusicPlayer component
 interface MusicPlayerProps {
@@ -380,13 +381,17 @@ export const MusicPlayer = ({
     }
   };
 
-  // Add effect to update window title
+  // Add effect to update window title and favicon
   useEffect(() => {
     const currentTrack = playlist[currentTrackIndex];
     if (currentTrack && isPlaying) {
       document.title = `${currentTrack.title} - ${currentTrack.album} - Localify`;
+      if (currentTrack.albumId) {
+        updateFavicon(api.getAlbumCoverUrl(currentTrack.albumId));
+      }
     } else {
       document.title = "Localify";
+      updateFavicon(null);
     }
   }, [currentTrackIndex, playlist, isPlaying]);
 
