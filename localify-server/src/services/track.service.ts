@@ -37,6 +37,9 @@ import {
   createOrUpdateArtist as dbCreateOrUpdateArtist,
   getAlbumWithTracks as dbGetAlbumWithTracks,
   getShuffledArtistTracks as dbGetShuffledArtistTracks,
+  incrementPlayCount as dbIncrementPlayCount,
+  getPlayCount as dbGetPlayCount,
+  getTopPlayedTracks as dbGetTopPlayedTracks,
 } from "../db/track.db.js";
 import type { Track, Album, Playlist } from "../types/model.js";
 import mime from "mime-types";
@@ -521,4 +524,26 @@ export async function getShuffledArtistTracks(
   limit: number = 50
 ): Promise<(Track & { reaction: "like" | "dislike" | null })[]> {
   return dbGetShuffledArtistTracks(db, artistId, userId, limit);
+}
+
+// Play count functions
+export async function incrementPlayCount(
+  userId: number,
+  trackId: number
+): Promise<void> {
+  dbIncrementPlayCount(db, userId, trackId);
+}
+
+export async function getPlayCount(
+  userId: number,
+  trackId: number
+): Promise<{ count: number; lastPlayed: number } | undefined> {
+  return dbGetPlayCount(db, userId, trackId);
+}
+
+export async function getTopPlayedTracks(
+  userId: number,
+  limit: number = 50
+): Promise<(Track & { playCount: number; lastPlayed: number })[]> {
+  return dbGetTopPlayedTracks(db, userId, limit);
 }

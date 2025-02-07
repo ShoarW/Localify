@@ -23,6 +23,9 @@ import {
   getAllArtists,
   createOrUpdateArtist,
   getShuffledArtistTracks,
+  incrementPlayCount,
+  getPlayCount,
+  getTopPlayedTracks,
 } from "../services/track.service.js";
 import { config } from "../config.js";
 import fs from "fs";
@@ -116,6 +119,9 @@ export async function streamTrackHandler(c: Context) {
   const fileSize = stat.size;
   const range = c.req.header("range");
 
+  // Get userId for play count tracking
+  const userId = c.get("userId");
+
   try {
     if (range) {
       const parts = range.replace(/bytes=/, "").split("-");
@@ -139,6 +145,12 @@ export async function streamTrackHandler(c: Context) {
           file.on("end", () => {
             try {
               controller.close();
+              // If this is the last chunk and user is authenticated, increment play count
+              if (userId && end >= fileSize - 1) {
+                incrementPlayCount(userId, id).catch((error) => {
+                  console.error("Error incrementing play count:", error);
+                });
+              }
             } catch (error) {
               console.error("Error closing controller:", error);
             }
@@ -177,6 +189,12 @@ export async function streamTrackHandler(c: Context) {
           file.on("end", () => {
             try {
               controller.close();
+              // If user is authenticated, increment play count
+              if (userId) {
+                incrementPlayCount(userId, id).catch((error) => {
+                  console.error("Error incrementing play count:", error);
+                });
+              }
             } catch (error) {
               console.error("Error closing controller:", error);
             }
@@ -786,5 +804,46 @@ export async function getShuffledArtistTracksHandler(c: Context) {
   } catch (error) {
     console.error("Error getting shuffled artist tracks:", error);
     return c.json({ error: "Failed to get shuffled tracks" }, 500);
+  }
+}
+
+// Play count handlers
+export async function getPlayCountHandler(c: Context) {
+  const trackId = parseInt(c.req.param("id"));
+  if (isNaN(trackId)) {
+    return c.json({ error: "Invalid track ID." }, 400);
+  }
+
+  const userId = c.get("userId");
+  if (!userId) {
+    return c.json({ error: "Authentication required" }, 401);
+  }
+
+  try {
+    const playCount = await getPlayCount(userId, trackId);
+    return c.json(playCount || { count: 0, lastPlayed: null });
+  } catch (error) {
+    console.error("Error getting play count:", error);
+    return c.json({ error: "Failed to get play count" }, 500);
+  }
+}
+
+export async function getTopPlayedTracksHandler(c: Context) {
+  const userId = c.get("userId");
+  if (!userId) {
+    return c.json({ error: "Authentication required" }, 401);
+  }
+
+  const limit = parseInt(c.req.query("limit") || "50");
+  if (isNaN(limit) || limit < 1 || limit > 100) {
+    return c.json({ error: "Invalid limit (must be between 1 and 100)" }, 400);
+  }
+
+  try {
+    const tracks = await getTopPlayedTracks(userId, limit);
+    return c.json(tracks);
+  } catch (error) {
+    console.error("Error getting top played tracks:", error);
+    return c.json({ error: "Failed to get top played tracks" }, 500);
   }
 }

@@ -1,5 +1,5 @@
 import type { Database } from "better-sqlite3";
-import type { Track, Album, Playlist } from "../types/model.js";
+import type { Album, Track, Playlist } from "../types/model.js";
 
 export function createTracksTable(db: Database) {
   // Create artists table first
@@ -93,6 +93,22 @@ export function createTracksTable(db: Database) {
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (playlistId, trackId),
         FOREIGN KEY (playlistId) REFERENCES playlists(id) ON DELETE CASCADE,
+        FOREIGN KEY (trackId) REFERENCES tracks(id) ON DELETE CASCADE
+    );
+    `
+  ).run();
+
+  // Create play_counts table
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS play_counts (
+        userId INTEGER NOT NULL,
+        trackId INTEGER NOT NULL,
+        count INTEGER NOT NULL DEFAULT 0,
+        lastPlayed DATETIME DEFAULT CURRENT_TIMESTAMP,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (userId, trackId),
+        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (trackId) REFERENCES tracks(id) ON DELETE CASCADE
     );
     `
@@ -525,6 +541,7 @@ export function getTracksByAlbumIdWithReactions(
           t.title,
           t.duration,
           t.genre,
+          t.albumId,
           NULL as reaction,
           ar.name as artistName
         FROM tracks t
@@ -547,6 +564,7 @@ export function getTracksByAlbumIdWithReactions(
         t.title,
         t.duration,
         t.genre,
+        t.albumId,
         r.type as reaction,
         ar.name as artistName
       FROM tracks t
@@ -1176,5 +1194,58 @@ export function getArtistAlbums(
     trackCount: number;
     type: "single" | "ep" | "album";
     hasImage: boolean;
+  })[];
+}
+
+// Add play count functions
+export function incrementPlayCount(
+  db: Database,
+  userId: number,
+  trackId: number
+): void {
+  const upsertQuery = db.prepare(`
+    INSERT INTO play_counts (userId, trackId, count, lastPlayed)
+    VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+    ON CONFLICT(userId, trackId) DO UPDATE SET
+      count = count + 1,
+      lastPlayed = CURRENT_TIMESTAMP
+  `);
+  upsertQuery.run(userId, trackId);
+}
+
+export function getPlayCount(
+  db: Database,
+  userId: number,
+  trackId: number
+): { count: number; lastPlayed: number } | undefined {
+  return db
+    .prepare(
+      `SELECT count, lastPlayed FROM play_counts WHERE userId = ? AND trackId = ?`
+    )
+    .get(userId, trackId) as { count: number; lastPlayed: number } | undefined;
+}
+
+export function getTopPlayedTracks(
+  db: Database,
+  userId: number,
+  limit: number = 50
+): (Track & { playCount: number; lastPlayed: number })[] {
+  return db
+    .prepare(
+      `
+      SELECT 
+        t.*,
+        pc.count as playCount,
+        pc.lastPlayed
+      FROM tracks t
+      JOIN play_counts pc ON pc.trackId = t.id
+      WHERE pc.userId = ?
+      ORDER BY pc.count DESC, pc.lastPlayed DESC
+      LIMIT ?
+    `
+    )
+    .all(userId, limit) as (Track & {
+    playCount: number;
+    lastPlayed: number;
   })[];
 }

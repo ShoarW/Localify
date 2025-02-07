@@ -31,6 +31,8 @@ import {
   createOrUpdateArtistHandler,
   streamArtistImageHandler,
   getShuffledArtistTracksHandler,
+  getPlayCountHandler,
+  getTopPlayedTracksHandler,
 } from "./controllers/track.controller.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { permissionMiddleware } from "./middleware/permission.js";
@@ -46,11 +48,17 @@ app.use("*", cors());
 
 // Optional auth middleware - will set userId if token is valid, but won't reject if no token
 async function optionalAuthMiddleware(c: Context, next: Next) {
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader) {
+    // No auth header, continue without auth
+    return await next();
+  }
+
   try {
     await authMiddleware(c, next);
   } catch (e) {
-    // Continue without auth
-    await next();
+    // Auth failed, but continue without auth
+    return await next();
   }
 }
 
@@ -59,15 +67,17 @@ app.post("/auth/login", loginHandler);
 app.post("/auth/signup", signupHandler);
 
 // -- Tracks -- //
-app.get("/tracks", getAllTracksHandler);
-app.get("/tracks/:id", getTrackByIdHandler);
+app.get("/tracks", optionalAuthMiddleware, getAllTracksHandler);
+app.get("/tracks/:id", optionalAuthMiddleware, getTrackByIdHandler);
+app.get("/tracks/:id/stream", optionalAuthMiddleware, streamTrackHandler);
+app.get("/tracks/:id/play-count", authMiddleware, getPlayCountHandler);
+app.get("/tracks/top-played", authMiddleware, getTopPlayedTracksHandler);
 app.delete(
   "/tracks/:id",
   authMiddleware,
   permissionMiddleware("delete_track"),
   deleteTrackHandler
 );
-app.get("/tracks/:id/stream", streamTrackHandler);
 app.get("/search", searchTracksHandler);
 app.get("/search/advanced", optionalAuthMiddleware, advancedSearchHandler);
 
