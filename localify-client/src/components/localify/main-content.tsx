@@ -43,10 +43,10 @@ export const MainContent = ({
 
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-y-auto hide-scrollbar p-8">
+      <div className="p-8">
         <div className="animate-pulse space-y-8">
           <div className="h-8 bg-white/5 rounded w-48" />
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="space-y-3">
                 <div className="aspect-square bg-white/5 rounded-xl" />
@@ -63,12 +63,12 @@ export const MainContent = ({
   if (!homeContent) return null;
 
   return (
-    <div className="flex-1 overflow-y-auto hide-scrollbar">
-      <div className="p-8 space-y-8">
+    <div className="min-h-full backdrop-blur-xl bg-gradient-to-b from-black/50 to-black/30">
+      <div className="p-8 space-y-8 pb-24">
         {/* New Releases Section */}
         <section>
           <h2 className="text-2xl font-bold text-white mb-6">New Releases</h2>
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {homeContent.newReleases.map((release) => (
               <AlbumCard
                 key={release.id}
@@ -143,7 +143,7 @@ export const MainContent = ({
                   isActive={currentTrackId === track.id}
                   isPlaying={isPlaying && currentTrackId === track.id}
                 />
-                <div className="absolute right-24 top-1/2 -translate-y-1/2">
+                <div className="absolute right-24 top-1/2 -translate-y-1/2 hidden sm:block">
                   <span className="text-xs text-white/40">
                     {formatDistanceToNow(track.lastPlayed)} ago
                   </span>

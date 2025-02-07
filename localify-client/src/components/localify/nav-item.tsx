@@ -48,7 +48,7 @@ export const NavItem = ({
 
   if (to) {
     return (
-      <Link to={to} className={className}>
+      <Link to={to} className={className} onClick={onClick}>
         {content}
       </Link>
     );

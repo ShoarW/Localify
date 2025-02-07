@@ -9,6 +9,8 @@ import {
   LogOut,
   User,
   ListMusic,
+  Menu,
+  X,
 } from "lucide-react";
 import { NavItem } from "./nav-item";
 import { Link, useNavigate } from "react-router-dom";
@@ -25,9 +27,11 @@ interface UserData {
 
 interface SidebarProps {
   playlists: Playlist[];
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export const Sidebar = ({ playlists }: SidebarProps) => {
+export const Sidebar = ({ playlists, isOpen, onClose }: SidebarProps) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserData | null>(null);
   const { openSearch } = useContext(SearchContext);
@@ -35,7 +39,7 @@ export const Sidebar = ({ playlists }: SidebarProps) => {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.code === "Space") {
-        e.preventDefault(); // Prevent default browser behavior
+        e.preventDefault();
         openSearch();
       }
     };
@@ -65,35 +69,81 @@ export const Sidebar = ({ playlists }: SidebarProps) => {
     navigate("/auth/login");
   };
 
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const sidebar = document.getElementById("sidebar");
+      const menuButton = document.getElementById("menu-button");
+      if (
+        isOpen &&
+        sidebar &&
+        !sidebar.contains(e.target as Node) &&
+        menuButton &&
+        !menuButton.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen, onClose]);
+
   return (
-    <div className="w-64 h-full backdrop-blur-2xl bg-gradient-to-b from-white/10 to-white/5 border-r border-white/10 flex flex-col overflow-hidden">
+    <div
+      id="sidebar"
+      className={`fixed md:relative w-64 h-full backdrop-blur-2xl bg-gradient-to-b from-white/10 to-white/5 border-r border-white/10 flex flex-col overflow-hidden z-50 transition-transform duration-300 ${
+        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      }`}
+    >
       <div className="p-6">
-        <Link to="/" className="flex items-center gap-2 mb-8">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-red-500 to-rose-600">
-            <Music className="w-6 h-6 text-white" />
-          </div>
-          <span className="text-white text-xl font-bold tracking-wider">
-            Localify
-          </span>
-        </Link>
+        <div className="flex items-center justify-between mb-8">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-red-500 to-rose-600">
+              <Music className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-white text-xl font-bold tracking-wider">
+              Localify
+            </span>
+          </Link>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-white/10 transition-colors md:hidden"
+          >
+            <X className="w-5 h-5 text-white/60" />
+          </button>
+        </div>
 
         <div className="space-y-2 mb-8">
-          <NavItem icon={<Home />} label="Home" to="/" />
+          <NavItem icon={<Home />} label="Home" to="/" onClick={onClose} />
           <NavItem
             icon={<Search />}
             label="Search"
-            onClick={openSearch}
+            onClick={() => {
+              openSearch();
+              onClose();
+            }}
             shortcut="⌃ Space"
           />
-          {/* <NavItem icon={<Library />} label="Your Library" /> */}
-          <NavItem icon={<Disc />} label="Albums" to="/albums" />
-          <NavItem icon={<User />} label="Artists" to="/artists" />
+          <NavItem
+            icon={<Disc />}
+            label="Albums"
+            to="/albums"
+            onClick={onClose}
+          />
+          <NavItem
+            icon={<User />}
+            label="Artists"
+            to="/artists"
+            onClick={onClose}
+          />
         </div>
 
         <div className="space-y-2">
           <Link
             to="/playlists"
             className="w-full px-4 py-3 rounded-xl transition-all duration-300 text-white/70 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/5 flex items-center gap-2"
+            onClick={onClose}
           >
             <PlusCircle size={20} />
             <span className="font-medium">Create Playlist</span>
@@ -102,6 +152,7 @@ export const Sidebar = ({ playlists }: SidebarProps) => {
             icon={<Heart className="text-red-500 fill-red-500" />}
             label="Liked Songs"
             to="/liked-music"
+            onClick={onClose}
           />
         </div>
       </div>
@@ -114,6 +165,7 @@ export const Sidebar = ({ playlists }: SidebarProps) => {
               key={playlist.id}
               to={`/playlists/${playlist.id}`}
               className="px-4 py-2 rounded-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-white/15 hover:to-white/5 flex items-center gap-2 group"
+              onClick={onClose}
             >
               <ListMusic className="w-4 h-4 text-white/40 group-hover:text-white/60" />
               <p className="text-white/70 group-hover:text-white text-sm truncate">
@@ -129,6 +181,7 @@ export const Sidebar = ({ playlists }: SidebarProps) => {
           <Link
             to="/profile"
             className="flex items-center gap-3 p-2 rounded-xl bg-white/5 backdrop-blur-xl hover:bg-white/10 transition-colors"
+            onClick={onClose}
           >
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
               <User className="w-5 h-5 text-white" />

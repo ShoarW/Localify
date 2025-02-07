@@ -25,6 +25,7 @@ import { ArtistsPage } from "./components/localify/artists-page";
 import { ArtistPage } from "./components/localify/artist-page";
 import { getUser } from "./utils/auth";
 import { PlayerProvider } from "./hooks/use-player";
+import { Menu } from "lucide-react";
 
 // Create a context for the search modal
 export const SearchContext = React.createContext<{
@@ -59,6 +60,7 @@ const AppLayout = () => {
   // Add playlist state
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isPlaylistsLoading, setIsPlaylistsLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Add playlist fetching effect
   useEffect(() => {
@@ -109,96 +111,115 @@ const AppLayout = () => {
           className="relative flex flex-1 overflow-hidden"
           style={{ fontFamily: "'Outfit', sans-serif" }}
         >
-          <Sidebar playlists={playlists} />
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <MainContent
-                  onPlayTrack={handlePlayTrack}
-                  playlists={playlists}
-                  onPlaylistsChange={setPlaylists}
-                  currentTrackId={currentTrackId}
-                  isPlaying={isPlaying}
+          {/* Mobile Menu Button */}
+          <button
+            id="menu-button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-xl bg-white/10 backdrop-blur-xl hover:bg-white/20 transition-colors"
+          >
+            <Menu className="w-6 h-6 text-white" />
+          </button>
+
+          <Sidebar
+            playlists={playlists}
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+          />
+
+          {/* Main Content Area */}
+          <div className="flex-1 relative h-full overflow-hidden md:ml-0">
+            <div className="absolute inset-0 overflow-y-auto">
+              <Routes>
+                <Route
+                  path="/"
+                  element={
+                    <MainContent
+                      onPlayTrack={handlePlayTrack}
+                      playlists={playlists}
+                      onPlaylistsChange={setPlaylists}
+                      currentTrackId={currentTrackId}
+                      isPlaying={isPlaying}
+                    />
+                  }
                 />
-              }
-            />
-            <Route
-              path="/albums"
-              element={
-                <AlbumsPage
-                  onPlayAlbum={async (albumId) => {
-                    try {
-                      const albumData = await api.getAlbum(albumId);
-                      handlePlayTrack(albumData.tracks, 0);
-                    } catch (error) {
-                      console.error("Failed to play album:", error);
-                    }
-                  }}
+                <Route
+                  path="/albums"
+                  element={
+                    <AlbumsPage
+                      onPlayAlbum={async (albumId) => {
+                        try {
+                          const albumData = await api.getAlbum(albumId);
+                          handlePlayTrack(albumData.tracks, 0);
+                        } catch (error) {
+                          console.error("Failed to play album:", error);
+                        }
+                      }}
+                    />
+                  }
                 />
-              }
-            />
-            <Route
-              path="/albums/:id"
-              element={
-                <AlbumPage
-                  currentTrackId={currentTrackId}
-                  isPlaying={isPlaying}
-                  onPlayAlbum={handlePlayTrack}
-                  playlists={playlists}
-                  onPlaylistsChange={setPlaylists}
+                <Route
+                  path="/albums/:id"
+                  element={
+                    <AlbumPage
+                      currentTrackId={currentTrackId}
+                      isPlaying={isPlaying}
+                      onPlayAlbum={handlePlayTrack}
+                      playlists={playlists}
+                      onPlaylistsChange={setPlaylists}
+                    />
+                  }
                 />
-              }
-            />
-            <Route path="/artists" element={<ArtistsPage />} />
-            <Route
-              path="/artists/:id"
-              element={
-                <ArtistPage
-                  currentTrackId={currentTrackId}
-                  isPlaying={isPlaying}
-                  onPlayTrack={handlePlayTrack}
-                  playlists={playlists}
-                  onPlaylistsChange={setPlaylists}
+                <Route path="/artists" element={<ArtistsPage />} />
+                <Route
+                  path="/artists/:id"
+                  element={
+                    <ArtistPage
+                      currentTrackId={currentTrackId}
+                      isPlaying={isPlaying}
+                      onPlayTrack={handlePlayTrack}
+                      playlists={playlists}
+                      onPlaylistsChange={setPlaylists}
+                    />
+                  }
                 />
-              }
-            />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route
-              path="/liked-music"
-              element={
-                <LikedMusicPage
-                  currentTrackId={currentTrackId}
-                  isPlaying={isPlaying}
-                  onPlayTrack={handlePlayTrack}
-                  playlists={playlists}
-                  onPlaylistsChange={setPlaylists}
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route
+                  path="/liked-music"
+                  element={
+                    <LikedMusicPage
+                      currentTrackId={currentTrackId}
+                      isPlaying={isPlaying}
+                      onPlayTrack={handlePlayTrack}
+                      playlists={playlists}
+                      onPlaylistsChange={setPlaylists}
+                    />
+                  }
                 />
-              }
-            />
-            <Route
-              path="/playlists"
-              element={
-                <PlaylistsPage
-                  playlists={playlists}
-                  isLoading={isPlaylistsLoading}
-                  onPlaylistsChange={setPlaylists}
+                <Route
+                  path="/playlists"
+                  element={
+                    <PlaylistsPage
+                      playlists={playlists}
+                      isLoading={isPlaylistsLoading}
+                      onPlaylistsChange={setPlaylists}
+                    />
+                  }
                 />
-              }
-            />
-            <Route
-              path="/playlists/:id"
-              element={
-                <PlaylistPage
-                  currentTrackId={currentTrackId}
-                  isPlaying={isPlaying}
-                  onPlayTrack={handlePlayTrack}
-                  playlists={playlists}
-                  onPlaylistsChange={setPlaylists}
+                <Route
+                  path="/playlists/:id"
+                  element={
+                    <PlaylistPage
+                      currentTrackId={currentTrackId}
+                      isPlaying={isPlaying}
+                      onPlayTrack={handlePlayTrack}
+                      playlists={playlists}
+                      onPlaylistsChange={setPlaylists}
+                    />
+                  }
                 />
-              }
-            />
-          </Routes>
+              </Routes>
+            </div>
+          </div>
         </div>
         <MusicPlayer
           playlist={currentPlaylist}

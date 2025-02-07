@@ -399,7 +399,7 @@ export const MusicPlayer = ({
   return (
     <div className="h-24 bg-black/30 backdrop-blur-xl border-t border-white/10 flex items-center px-4 relative">
       {/* Track Info Section */}
-      <div className="flex items-center gap-4 w-[30%]">
+      <div className="flex items-center gap-4 w-[30%] min-w-[180px] md:w-[30%]">
         {currentTrack ? (
           <>
             <Link
@@ -434,11 +434,6 @@ export const MusicPlayer = ({
                 ) : (
                   <Music className="w-6 h-6 text-white/40" />
                 )}
-                {isLoading && (
-                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                    <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  </div>
-                )}
               </div>
             </Link>
             <div
@@ -458,33 +453,33 @@ export const MusicPlayer = ({
                 </Link>
               </div>
             </div>
+            <div className="hidden md:flex items-center gap-2">
+              <ThumbsUp
+                className={`w-5 h-5 cursor-pointer transition-all duration-300 hover:scale-110 ${
+                  isLiked ? "text-green-500 fill-green-500" : "text-white/60"
+                } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                onClick={() => handleReaction("like")}
+              />
+              <ThumbsDown
+                className={`w-5 h-5 cursor-pointer transition-all duration-300 hover:scale-110 ${
+                  isDisliked ? "text-red-500 fill-red-500" : "text-white/60"
+                } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                onClick={() => handleReaction("dislike")}
+              />
+            </div>
           </>
         ) : (
           <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
             <Music className="w-6 h-6 text-white/40" />
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <ThumbsUp
-            className={`w-5 h-5 cursor-pointer transition-all duration-300 hover:scale-110 ${
-              isLiked ? "text-green-500 fill-green-500" : "text-white/60"
-            } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-            onClick={() => handleReaction("like")}
-          />
-          <ThumbsDown
-            className={`w-5 h-5 cursor-pointer transition-all duration-300 hover:scale-110 ${
-              isDisliked ? "text-red-500 fill-red-500" : "text-white/60"
-            } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-            onClick={() => handleReaction("dislike")}
-          />
-        </div>
       </div>
 
       {/* Controls Section */}
       <div className="flex-1 flex flex-col items-center gap-2">
         <div className="flex items-center gap-6">
           <Shuffle
-            className={`w-5 h-5 cursor-pointer transition-all duration-300 ${
+            className={`w-5 h-5 cursor-pointer transition-all duration-300 hidden md:block ${
               isShuffle
                 ? "text-red-500 scale-110"
                 : "text-white/60 hover:text-white"
@@ -521,7 +516,7 @@ export const MusicPlayer = ({
             onClick={handleNext}
           />
           <RepeatIcon
-            className={`w-5 h-5 cursor-pointer transition-all duration-300 ${
+            className={`w-5 h-5 cursor-pointer transition-all duration-300 hidden md:block ${
               repeatMode === 0
                 ? "text-white/60 hover:text-white"
                 : repeatMode === 1
@@ -531,12 +526,12 @@ export const MusicPlayer = ({
             onClick={() => setRepeatMode((prev) => (prev + 1) % 3)}
           />
         </div>
-        <div className="flex items-center gap-2 w-full max-w-md">
-          <span className="text-xs text-white/40">
+        <div className="flex items-center gap-2 w-full max-w-md px-2">
+          <span className="text-xs text-white/40 hidden md:block">
             {formatTime(currentTime)}
           </span>
           <div
-            className="group relative py-4 px-2 -my-4 flex-1"
+            className="group relative py-4 -my-4 flex-1"
             onMouseDown={(e) => {
               e.preventDefault();
 
@@ -550,7 +545,6 @@ export const MusicPlayer = ({
               );
               const newTime = (x / rect.width) * duration;
 
-              // Set initial temp time instead of updating audio
               setTempTime(newTime);
               setIsDraggingTime(true);
             }}
@@ -580,12 +574,14 @@ export const MusicPlayer = ({
               />
             </div>
           </div>
-          <span className="text-xs text-white/40">{formatTime(duration)}</span>
+          <span className="text-xs text-white/40 hidden md:block">
+            {formatTime(duration)}
+          </span>
         </div>
       </div>
 
       {/* Volume Section */}
-      <div className="w-[30%] flex justify-end">
+      <div className="w-[30%] hidden md:flex justify-end">
         <div className="flex items-center gap-2">
           <button
             ref={queueButtonRef}
@@ -615,7 +611,7 @@ export const MusicPlayer = ({
             id="volume-bar"
             className="group relative py-4 px-2 -my-4 cursor-pointer"
             onMouseDown={(e) => {
-              e.preventDefault(); // Prevent text selection
+              e.preventDefault();
 
               const volumeBar =
                 e.currentTarget.querySelector("[data-volume-bar]");
