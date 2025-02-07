@@ -542,6 +542,7 @@ export function getTracksByAlbumIdWithReactions(
           t.duration,
           t.genre,
           t.albumId,
+          t.artistId,
           NULL as reaction,
           ar.name as artistName
         FROM tracks t
@@ -565,6 +566,7 @@ export function getTracksByAlbumIdWithReactions(
         t.duration,
         t.genre,
         t.albumId,
+        t.artistId,
         r.type as reaction,
         ar.name as artistName
       FROM tracks t
@@ -1116,6 +1118,7 @@ export function getShuffledArtistTracks(
           t.duration,
           t.genre,
           t.albumId,
+          t.artistId,
           NULL as reaction,
           ar.name as artistName
         FROM tracks t
@@ -1140,6 +1143,7 @@ export function getShuffledArtistTracks(
         t.duration,
         t.genre,
         t.albumId,
+        t.artistId,
         r.type as reaction,
         ar.name as artistName
       FROM tracks t

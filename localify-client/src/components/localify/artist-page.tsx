@@ -35,7 +35,22 @@ export const ArtistPage = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-  const isAdmin = getUser()?.isAdmin || false;
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Reset modal and description state when artist changes
+  useEffect(() => {
+    setIsEditModalOpen(false);
+    setIsDescriptionExpanded(false);
+  }, [id]);
+
+  // Check admin status
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const user = await getUser();
+      setIsAdmin(user?.isAdmin || false);
+    };
+    checkAdmin();
+  }, []);
 
   useEffect(() => {
     const fetchArtist = async () => {
@@ -280,10 +295,12 @@ export const ArtistPage = ({
                   title: track.title,
                   artist: artist.name,
                   artistId: artist.id,
+                  artistName: artist.name,
                   duration: track.duration,
                   reaction: track.reaction,
                   album: "Single",
                   albumId: 0,
+                  hasImage: false,
                   year: 0,
                   genre: "",
                   mimeType: "",
