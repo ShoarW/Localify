@@ -260,7 +260,21 @@ export async function streamTrackHandler(c: Context) {
 
 export async function getAllAlbumsHandler(c: Context) {
   const userId = c.get("userId") || null;
-  return c.json(await getAllAlbums(userId));
+  const page = parseInt(c.req.query("page") || "1");
+  const pageSize = parseInt(c.req.query("pageSize") || "20");
+
+  // Validate pagination parameters
+  if (isNaN(page) || page < 1) {
+    return c.json({ error: "Invalid page number" }, 400);
+  }
+  if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
+    return c.json(
+      { error: "Invalid page size (must be between 1 and 100)" },
+      400
+    );
+  }
+
+  return c.json(await getAllAlbums(userId, page, pageSize));
 }
 
 export async function getAlbumWithTracksHandler(c: Context) {
@@ -638,7 +652,21 @@ export async function getArtistByIdHandler(c: Context) {
 
 export async function getAllArtistsHandler(c: Context) {
   try {
-    const artists = await getAllArtists();
+    const page = parseInt(c.req.query("page") || "1");
+    const pageSize = parseInt(c.req.query("pageSize") || "20");
+
+    // Validate pagination parameters
+    if (isNaN(page) || page < 1) {
+      return c.json({ error: "Invalid page number" }, 400);
+    }
+    if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
+      return c.json(
+        { error: "Invalid page size (must be between 1 and 100)" },
+        400
+      );
+    }
+
+    const artists = await getAllArtists(page, pageSize);
     return c.json(artists);
   } catch (error) {
     console.error("Error getting artists:", error);

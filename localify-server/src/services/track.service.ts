@@ -460,13 +460,37 @@ export async function getAlbumById(
   return dbGetAlbumById(db, id);
 }
 
-export async function getAllAlbums(userId: number | null = null): Promise<
-  (Album & {
+export async function getAllAlbums(
+  userId: number | null,
+  page: number = 1,
+  pageSize: number = 20
+): Promise<{
+  items: (Album & {
     artist: string | null;
+    type: "single" | "ep" | "album";
     tracks: (Track & { reaction: "like" | "dislike" | null })[];
-  })[]
-> {
-  return dbGetAllAlbumsWithTracks(db, userId);
+  })[];
+  total: number;
+  currentPage: number;
+  totalPages: number;
+}> {
+  const offset = (page - 1) * pageSize;
+  const { items: albums, total } = await dbGetAllAlbums(db, pageSize, offset);
+
+  const albumsWithTracks = albums.map((album) => {
+    const tracks = dbGetTracksByAlbumIdWithReactions(db, album.id!, userId);
+    return {
+      ...album,
+      tracks,
+    };
+  });
+
+  return {
+    items: albumsWithTracks,
+    total,
+    currentPage: page,
+    totalPages: Math.ceil(total / pageSize),
+  };
 }
 
 export async function getAlbumWithTracks(
@@ -680,20 +704,27 @@ export async function getArtistById(
   };
 }
 
-export async function getAllArtists(): Promise<
-  {
+export async function getAllArtists(
+  page: number = 1,
+  pageSize: number = 20
+): Promise<{
+  items: {
     id: number;
     name: string;
     description: string | null;
     imagePath: string | null;
     trackCount: number;
     albumCount: number;
-  }[]
-> {
-  const artists = await dbGetAllArtists(db);
+  }[];
+  total: number;
+  currentPage: number;
+  totalPages: number;
+}> {
+  const offset = (page - 1) * pageSize;
+  const { items: artists, total } = await dbGetAllArtists(db, pageSize, offset);
 
   // Transform the results to match the expected type
-  return artists.map((artist) => ({
+  const transformedArtists = artists.map((artist) => ({
     id: artist.id,
     name: artist.name,
     description: artist.description,
@@ -701,6 +732,13 @@ export async function getAllArtists(): Promise<
     trackCount: artist.trackCount,
     albumCount: artist.albumCount,
   }));
+
+  return {
+    items: transformedArtists,
+    total,
+    currentPage: page,
+    totalPages: Math.ceil(total / pageSize),
+  };
 }
 
 export async function createOrUpdateArtist(artist: {

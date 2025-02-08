@@ -175,6 +175,16 @@ export interface HomeOptions {
   listenAgainLimit?: number;
 }
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  currentPage: number;
+  totalPages: number;
+}
+
+export interface PaginatedAlbums extends PaginatedResponse<Album> {}
+export interface PaginatedArtists extends PaginatedResponse<Artist> {}
+
 const API_BASE_URL = "http://localhost:3000";
 
 // Add token refresh function
@@ -276,8 +286,13 @@ export const api = {
   },
 
   // Album endpoints
-  getAlbums: async (): Promise<Album[]> => {
-    const response = await fetchWithToken(`${API_BASE_URL}/albums`);
+  getAlbums: async (
+    page: number = 1,
+    pageSize: number = 50
+  ): Promise<PaginatedAlbums> => {
+    const response = await fetchWithToken(
+      `${API_BASE_URL}/albums?page=${page}&pageSize=${pageSize}`
+    );
     if (!response.ok) throw new Error("Failed to fetch albums");
     return response.json();
   },
@@ -633,12 +648,18 @@ export const api = {
   },
 
   // Artist endpoints
-  getArtists: async (): Promise<Artist[]> => {
-    const response = await fetch(`${API_BASE_URL}/artists`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
+  getArtists: async (
+    page: number = 1,
+    pageSize: number = 50
+  ): Promise<PaginatedArtists> => {
+    const response = await fetch(
+      `${API_BASE_URL}/artists?page=${page}&pageSize=${pageSize}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
     return response.json();
   },
 

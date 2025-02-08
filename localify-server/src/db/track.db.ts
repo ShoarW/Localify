@@ -164,12 +164,30 @@ export function getAlbumById(
   return result;
 }
 
-export function getAllAlbums(db: Database): (Album & {
-  artist: string | null;
-  type: "single" | "ep" | "album";
-  hasImage: boolean;
-})[] {
-  return db
+export function getAllAlbums(
+  db: Database,
+  limit: number = 20,
+  offset: number = 0
+): {
+  items: (Album & {
+    artist: string | null;
+    type: "single" | "ep" | "album";
+    hasImage: boolean;
+  })[];
+  total: number;
+} {
+  // First get total count
+  const total = db
+    .prepare(
+      `
+      SELECT COUNT(*) as count
+      FROM albums
+    `
+    )
+    .get() as { count: number };
+
+  // Then get paginated results
+  const items = db
     .prepare(
       `
       WITH album_tracks AS (
@@ -194,13 +212,19 @@ export function getAllAlbums(db: Database): (Album & {
         END as type
       FROM album_tracks
       ORDER BY title ASC
+      LIMIT ? OFFSET ?
     `
     )
-    .all() as (Album & {
+    .all(limit, offset) as (Album & {
     artist: string | null;
     type: "single" | "ep" | "album";
     hasImage: boolean;
   })[];
+
+  return {
+    items,
+    total: total.count,
+  };
 }
 
 export function addAlbum(db: Database, album: Omit<Album, "id">): number {
@@ -592,7 +616,7 @@ export function getAllAlbumsWithTracks(
 })[] {
   const albums = getAllAlbums(db);
 
-  return albums.map((album) => {
+  return albums.items.map((album) => {
     const tracks = getTracksByAlbumIdWithReactions(db, album.id!, userId);
     return {
       ...album,
@@ -1008,15 +1032,33 @@ export function getArtistById(
   };
 }
 
-export function getAllArtists(db: Database): {
-  id: number;
-  name: string;
-  description: string | null;
-  hasImage: boolean;
-  trackCount: number;
-  albumCount: number;
-}[] {
-  return db
+export function getAllArtists(
+  db: Database,
+  limit: number = 20,
+  offset: number = 0
+): {
+  items: {
+    id: number;
+    name: string;
+    description: string | null;
+    hasImage: boolean;
+    trackCount: number;
+    albumCount: number;
+  }[];
+  total: number;
+} {
+  // First get total count
+  const total = db
+    .prepare(
+      `
+      SELECT COUNT(*) as count
+      FROM artists
+    `
+    )
+    .get() as { count: number };
+
+  // Then get paginated results
+  const items = db
     .prepare(
       `
       SELECT 
@@ -1031,9 +1073,10 @@ export function getAllArtists(db: Database): {
       LEFT JOIN albums al ON al.artistId = a.id
       GROUP BY a.id
       ORDER BY a.name ASC
+      LIMIT ? OFFSET ?
     `
     )
-    .all() as {
+    .all(limit, offset) as {
     id: number;
     name: string;
     description: string | null;
@@ -1041,6 +1084,11 @@ export function getAllArtists(db: Database): {
     trackCount: number;
     albumCount: number;
   }[];
+
+  return {
+    items,
+    total: total.count,
+  };
 }
 
 export function createOrUpdateArtist(
