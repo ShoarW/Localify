@@ -25,6 +25,11 @@ import { ArtistsPage } from "./components/localify/artists-page";
 import { ArtistPage } from "./components/localify/artist-page";
 import { PlayerProvider } from "./hooks/use-player";
 import { Menu } from "lucide-react";
+import { AdminTracksPage } from "./pages/admin/tracks";
+import { AdminLayout } from "./pages/admin/layout";
+import { AdminArtistsPage } from "./pages/admin/artists";
+import { AdminAlbumsPage } from "./pages/admin/albums";
+import { AdminUsersPage } from "./pages/admin/users";
 
 // Create a context for the search modal
 export const SearchContext = React.createContext<{
@@ -214,6 +219,26 @@ const AppLayout = () => {
                     />
                   }
                 />
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute>
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route
+                    path="tracks"
+                    element={<AdminTracksPage onPlayTrack={handlePlayTrack} />}
+                  />
+                  <Route path="artists" element={<AdminArtistsPage />} />
+                  <Route path="albums" element={<AdminAlbumsPage />} />
+                  <Route path="users" element={<AdminUsersPage />} />
+                  <Route
+                    index
+                    element={<Navigate to="/admin/tracks" replace />}
+                  />
+                </Route>
               </Routes>
             </div>
           </div>

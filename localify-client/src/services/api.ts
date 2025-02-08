@@ -19,6 +19,16 @@ export interface Track {
   path: string;
 }
 
+export interface AdminTrack {
+  id: number;
+  title: string | null;
+  albumId: number | null;
+  albumTitle: string | null;
+  artistId: number | null;
+  artistName: string | null;
+  isEmbedded: boolean;
+}
+
 export interface Album {
   id: number;
   title: string;
@@ -55,7 +65,7 @@ export interface AuthResponse {
 export type ReactionType = "like" | "dislike" | null;
 
 export interface PaginatedTracks {
-  tracks: Track[];
+  tracks: Track[] | AdminTrack[];
   total: number;
   currentPage: number;
   totalPages: number;
@@ -171,6 +181,34 @@ export interface HomeOptions {
   newReleasesLimit?: number;
   quickPicksLimit?: number;
   listenAgainLimit?: number;
+}
+
+export interface AdminArtist {
+  id: number;
+  name: string;
+  trackCount: number;
+  albumCount: number;
+  hasImage: boolean;
+}
+
+export interface AdminAlbum {
+  id: number;
+  title: string;
+  artistId: number | null;
+  artistName: string | null;
+  trackCount: number;
+  hasImage: boolean;
+  year: number | null;
+}
+
+export interface AdminUser {
+  id: number;
+  username: string;
+  email: string;
+  playlistCount: number;
+  trackCount: number;
+  isAdmin: boolean;
+  createdAt: string;
 }
 
 const API_BASE_URL = "http://localhost:3000";
@@ -708,6 +746,186 @@ export const api = {
 
     if (!response.ok) {
       throw new Error("Failed to fetch home content");
+    }
+
+    return response.json();
+  },
+
+  // Track analysis endpoints
+  analyzeTrack: async (trackId: number): Promise<{ success: boolean }> => {
+    const response = await fetchWithToken(
+      `${API_BASE_URL}/tracks/${trackId}/analyze`,
+      {
+        method: "POST",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to analyze track");
+    }
+
+    return response.json();
+  },
+
+  // Similar tracks endpoint
+  getSimilarTracks: async (
+    trackId: number,
+    limit: number = 10
+  ): Promise<Track[]> => {
+    const response = await fetchWithToken(
+      `${API_BASE_URL}/tracks/${trackId}/similar?limit=${limit}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to get similar tracks");
+    }
+
+    return response.json();
+  },
+
+  analyzeBatch: async (
+    onProgress: (update: {
+      type: "analysis_progress";
+      status: "processing" | "complete";
+      currentTrack?: {
+        id: number;
+        title: string;
+        path: string;
+        album: {
+          id: number;
+          title: string;
+        };
+      };
+      success: number;
+      failed: number;
+      total: number;
+      message?: string;
+    }) => void
+  ): Promise<void> => {
+    const response = await fetchWithToken(
+      `${API_BASE_URL}/tracks/analyze-batch?batchSize=50`,
+      {
+        method: "POST",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to start analysis");
+    }
+
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim() || !line.startsWith("data: ")) continue;
+
+          try {
+            const data = JSON.parse(line.slice(6));
+            onProgress(data);
+          } catch (error) {
+            console.error("Error parsing analysis update:", error, line);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Analysis error:", error);
+      throw error;
+    } finally {
+      reader.releaseLock();
+    }
+  },
+
+  // Admin endpoints
+  getPagedTracks: async (
+    page: number = 1,
+    pageSize: number = 50
+  ): Promise<PaginatedTracks & { tracks: AdminTrack[] }> => {
+    const response = await fetchWithToken(
+      `${API_BASE_URL}/tracks/paged?page=${page}&pageSize=${pageSize}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch paged tracks");
+    }
+
+    return response.json();
+  },
+
+  getPagedArtists: async (
+    page: number = 1,
+    pageSize: number = 50
+  ): Promise<{
+    artists: AdminArtist[];
+    total: number;
+    currentPage: number;
+    totalPages: number;
+  }> => {
+    const response = await fetchWithToken(
+      `${API_BASE_URL}/artists/paged?page=${page}&pageSize=${pageSize}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch paged artists");
+    }
+
+    return response.json();
+  },
+
+  getPagedAlbums: async (
+    page: number = 1,
+    pageSize: number = 50
+  ): Promise<{
+    albums: AdminAlbum[];
+    total: number;
+    currentPage: number;
+    totalPages: number;
+  }> => {
+    const response = await fetchWithToken(
+      `${API_BASE_URL}/albums/paged?page=${page}&pageSize=${pageSize}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch paged albums");
+    }
+
+    return response.json();
+  },
+
+  getPagedUsers: async (
+    page: number = 1,
+    pageSize: number = 50
+  ): Promise<{
+    users: AdminUser[];
+    total: number;
+    currentPage: number;
+    totalPages: number;
+  }> => {
+    const response = await fetchWithToken(
+      `${API_BASE_URL}/users/paged?page=${page}&pageSize=${pageSize}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch paged users");
+    }
+
+    return response.json();
+  },
+
+  getTrackById: async (trackId: number): Promise<Track> => {
+    const response = await fetchWithToken(`${API_BASE_URL}/tracks/${trackId}`);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch track");
     }
 
     return response.json();

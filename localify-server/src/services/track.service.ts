@@ -43,6 +43,9 @@ import {
   getNewReleases as dbGetNewReleases,
   getQuickPicks as dbGetQuickPicks,
   getListenAgain as dbGetListenAgain,
+  getTrackWithPath,
+  markTrackAsEmbedded,
+  getTracksToEmbed,
 } from "../db/track.db.js";
 import type { Track, Album, Playlist } from "../types/model.js";
 import mime from "mime-types";
@@ -677,5 +680,484 @@ export async function getHomePageContent(
     quickPicks,
     listenAgain,
     featuredPlaylists: [], // Empty for now
+  };
+}
+
+export async function analyzeTrack(trackId: number): Promise<boolean> {
+  try {
+    const track = await getTrackWithPath(db, trackId);
+    if (!track) {
+      throw new Error("Track not found");
+    }
+
+    // Read the audio file
+    const audioBuffer = await fs.readFile(track.path);
+
+    // Create form data
+    const formData = new FormData();
+    formData.append(
+      "audio",
+      new Blob([audioBuffer]),
+      path.basename(track.path)
+    );
+    formData.append("song_id", trackId.toString());
+
+    // Send to analyzer endpoint
+    const response = await fetch("http://localhost:8000/add_to_index", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Analysis failed with status: ${response.status}`);
+    }
+
+    // Mark track as embedded in database
+    markTrackAsEmbedded(db, trackId);
+
+    return true;
+  } catch (error) {
+    console.error("Error analyzing track:", error);
+    return false;
+  }
+}
+
+export async function analyzeBatchTracks(
+  batchSize: number = 10,
+  progressCallback?: (progress: {
+    status: "processing" | "complete";
+    currentTrack?: {
+      id: number;
+      title: string | null;
+      path: string;
+      album: {
+        id: number | null;
+        title: string | null;
+      };
+    };
+    success: number;
+    failed: number;
+    total: number;
+  }) => void
+): Promise<{
+  success: number;
+  failed: number;
+  total: number;
+}> {
+  const tracks = (await db
+    .prepare(
+      `
+    SELECT 
+      t.id, 
+      t.title,
+      t.path,
+      a.id as albumId,
+      a.title as albumTitle
+    FROM tracks t
+    LEFT JOIN embedded_tracks e ON t.id = e.track_id
+    LEFT JOIN albums a ON t.albumId = a.id
+    WHERE e.is_embedded IS NULL OR e.is_embedded = 0
+    LIMIT ?
+  `
+    )
+    .all(batchSize)) as {
+    id: number;
+    title: string | null;
+    path: string;
+    albumId: number | null;
+    albumTitle: string | null;
+  }[];
+
+  let success = 0;
+  let failed = 0;
+
+  for (const track of tracks) {
+    try {
+      // Notify about current track
+      progressCallback?.({
+        status: "processing",
+        currentTrack: {
+          id: track.id,
+          title: track.title,
+          path: track.path,
+          album: {
+            id: track.albumId,
+            title: track.albumTitle,
+          },
+        },
+        success,
+        failed,
+        total: tracks.length,
+      });
+
+      const result = await analyzeTrack(track.id);
+      if (result) {
+        success++;
+      } else {
+        failed++;
+      }
+    } catch (error) {
+      console.error(`Failed to analyze track ${track.id}:`, error);
+      failed++;
+    }
+  }
+
+  // Send final update
+  progressCallback?.({
+    status: "complete",
+    success,
+    failed,
+    total: tracks.length,
+  });
+
+  return {
+    success,
+    failed,
+    total: tracks.length,
+  };
+}
+
+type SimilarSong = {
+  rank: number;
+  distance: number;
+  id: number;
+};
+
+type SimilarSongsResponse = {
+  query_id: number;
+  similar_songs: SimilarSong[];
+};
+
+export async function getSimilarTracks(
+  trackId: number,
+  userId: number | null = null,
+  limit: number = 5
+): Promise<
+  (Track & { reaction: "like" | "dislike" | null; artistName: string | null })[]
+> {
+  try {
+    // Get similar songs from analyzer service
+    const response = await fetch(
+      `http://localhost:8000/find_similar/${trackId}?k=${limit}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to get similar tracks: ${response.status}`);
+    }
+
+    const data = (await response.json()) as SimilarSongsResponse;
+
+    // Get all the track IDs we need to fetch, including the original track
+    const trackIds = [trackId, ...data.similar_songs.map((song) => song.id)];
+
+    // Fetch all tracks in a single query with artist names and reactions
+    const tracks = userId
+      ? db
+          .prepare(
+            `
+            SELECT 
+              t.id,
+              t.title,
+              t.duration,
+              t.genre,
+              t.albumId,
+              ar.name as artistName,
+              r.type as reaction
+            FROM tracks t
+            LEFT JOIN artists ar ON t.artistId = ar.id
+            LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+            WHERE t.id IN (${trackIds.map(() => "?").join(",")})
+          `
+          )
+          .all(userId, ...trackIds)
+      : db
+          .prepare(
+            `
+            SELECT 
+              t.id,
+              t.title,
+              t.duration,
+              t.genre,
+              t.albumId,
+              ar.name as artistName,
+              NULL as reaction
+            FROM tracks t
+            LEFT JOIN artists ar ON t.artistId = ar.id
+            WHERE t.id IN (${trackIds.map(() => "?").join(",")})
+          `
+          )
+          .all(trackIds);
+
+    // Create a map for quick track lookup
+    const trackMap = new Map(tracks.map((track) => [track.id, track]));
+
+    // Return tracks in order: original track first, then similar tracks in order of similarity
+    return [
+      trackMap.get(trackId)!,
+      ...data.similar_songs.map((song) => trackMap.get(song.id)!),
+    ] as (Track & {
+      reaction: "like" | "dislike" | null;
+      artistName: string | null;
+    })[];
+  } catch (error) {
+    console.error("Error getting similar tracks:", error);
+    throw error;
+  }
+}
+
+export async function getPagedTracks(
+  page: number = 1,
+  pageSize: number = 50
+): Promise<{
+  tracks: {
+    id: number;
+    title: string | null;
+    albumId: number | null;
+    albumTitle: string | null;
+    artistId: number | null;
+    artistName: string | null;
+    isEmbedded: boolean;
+  }[];
+  total: number;
+  currentPage: number;
+  totalPages: number;
+}> {
+  const offset = (page - 1) * pageSize;
+
+  // Get total count
+  const totalResult = db
+    .prepare("SELECT COUNT(*) as count FROM tracks")
+    .get() as { count: number };
+
+  // Get tracks with minimal fields
+  const tracks = db
+    .prepare(
+      `
+      SELECT 
+        t.id,
+        t.title,
+        t.albumId,
+        a.title as albumTitle,
+        t.artistId,
+        ar.name as artistName,
+        CASE WHEN e.is_embedded = 1 THEN 1 ELSE 0 END as isEmbedded
+      FROM tracks t
+      LEFT JOIN albums a ON t.albumId = a.id
+      LEFT JOIN artists ar ON t.artistId = ar.id
+      LEFT JOIN embedded_tracks e ON t.id = e.track_id
+      ORDER BY t.id
+      LIMIT ? OFFSET ?
+    `
+    )
+    .all(pageSize, offset) as {
+    id: number;
+    title: string | null;
+    albumId: number | null;
+    albumTitle: string | null;
+    artistId: number | null;
+    artistName: string | null;
+    isEmbedded: number;
+  }[];
+
+  const totalPages = Math.ceil(totalResult.count / pageSize);
+
+  return {
+    tracks: tracks.map((track) => ({
+      ...track,
+      isEmbedded: Boolean(track.isEmbedded),
+    })),
+    total: totalResult.count,
+    currentPage: page,
+    totalPages,
+  };
+}
+
+export function getPagedArtists(
+  page: number = 1,
+  pageSize: number = 50
+): {
+  artists: {
+    id: number;
+    name: string;
+    description: string | null;
+    imagePath: string | null;
+    trackCount: number;
+    albumCount: number;
+  }[];
+  total: number;
+  currentPage: number;
+  totalPages: number;
+} {
+  const offset = (page - 1) * pageSize;
+
+  // Get total count
+  const totalResult = db
+    .prepare("SELECT COUNT(*) as count FROM artists")
+    .get() as { count: number };
+
+  // Get artists with track and album counts
+  const artists = db
+    .prepare(
+      `
+      SELECT 
+        a.id,
+        a.name,
+        a.description,
+        a.imagePath,
+        COUNT(DISTINCT t.id) as trackCount,
+        COUNT(DISTINCT al.id) as albumCount
+      FROM artists a
+      LEFT JOIN tracks t ON t.artistId = a.id
+      LEFT JOIN albums al ON al.artistId = a.id
+      GROUP BY a.id
+      ORDER BY a.name ASC
+      LIMIT ? OFFSET ?
+    `
+    )
+    .all(pageSize, offset) as {
+    id: number;
+    name: string;
+    description: string | null;
+    imagePath: string | null;
+    trackCount: number;
+    albumCount: number;
+  }[];
+
+  const totalPages = Math.ceil(totalResult.count / pageSize);
+
+  return {
+    artists,
+    total: totalResult.count,
+    currentPage: page,
+    totalPages,
+  };
+}
+
+export function getPagedAlbums(
+  page: number = 1,
+  pageSize: number = 50
+): {
+  albums: {
+    id: number;
+    title: string;
+    artistId: number | null;
+    artistName: string | null;
+    year: number | null;
+    coverPath: string | null;
+    trackCount: number;
+    type: "single" | "ep" | "album";
+  }[];
+  total: number;
+  currentPage: number;
+  totalPages: number;
+} {
+  const offset = (page - 1) * pageSize;
+
+  // Get total count
+  const totalResult = db
+    .prepare("SELECT COUNT(*) as count FROM albums")
+    .get() as { count: number };
+
+  // Get albums with artist names and track counts
+  const albums = db
+    .prepare(
+      `
+      SELECT 
+        a.id,
+        a.title,
+        a.artistId,
+        a.year,
+        a.coverPath,
+        ar.name as artistName,
+        COUNT(t.id) as trackCount,
+        CASE 
+          WHEN COUNT(t.id) <= 3 THEN 'single'
+          WHEN COUNT(t.id) <= 6 THEN 'ep'
+          ELSE 'album'
+        END as type
+      FROM albums a
+      LEFT JOIN artists ar ON a.artistId = ar.id
+      LEFT JOIN tracks t ON t.albumId = a.id
+      GROUP BY a.id
+      ORDER BY a.title ASC
+      LIMIT ? OFFSET ?
+    `
+    )
+    .all(pageSize, offset) as {
+    id: number;
+    title: string;
+    artistId: number | null;
+    artistName: string | null;
+    year: number | null;
+    coverPath: string | null;
+    trackCount: number;
+    type: "single" | "ep" | "album";
+  }[];
+
+  const totalPages = Math.ceil(totalResult.count / pageSize);
+
+  return {
+    albums,
+    total: totalResult.count,
+    currentPage: page,
+    totalPages,
+  };
+}
+
+export function getPagedUsers(
+  page: number = 1,
+  pageSize: number = 50
+): {
+  users: {
+    id: number;
+    username: string;
+    createdAt: number;
+    playlistCount: number;
+    trackCount: number;
+  }[];
+  total: number;
+  currentPage: number;
+  totalPages: number;
+} {
+  const offset = (page - 1) * pageSize;
+
+  // Get total count
+  const totalResult = db
+    .prepare("SELECT COUNT(*) as count FROM users")
+    .get() as { count: number };
+
+  // Get users with playlist and track counts
+  const users = db
+    .prepare(
+      `
+      SELECT 
+        u.id,
+        u.username,
+        u.createdAt,
+        COUNT(DISTINCT p.id) as playlistCount,
+        COUNT(DISTINCT pc.trackId) as trackCount
+      FROM users u
+      LEFT JOIN playlists p ON p.userId = u.id
+      LEFT JOIN play_counts pc ON pc.userId = u.id
+      GROUP BY u.id
+      ORDER BY u.username ASC
+      LIMIT ? OFFSET ?
+    `
+    )
+    .all(pageSize, offset) as {
+    id: number;
+    username: string;
+    createdAt: number;
+    playlistCount: number;
+    trackCount: number;
+  }[];
+
+  const totalPages = Math.ceil(totalResult.count / pageSize);
+
+  return {
+    users,
+    total: totalResult.count,
+    currentPage: page,
+    totalPages,
   };
 }

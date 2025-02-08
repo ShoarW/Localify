@@ -38,6 +38,13 @@ import {
   getPlayCountHandler,
   getTopPlayedTracksHandler,
   getHomePageHandler,
+  analyzeTrackHandler,
+  analyzeBatchTracksHandler,
+  getSimilarTracksHandler,
+  getPagedTracksHandler,
+  getPagedArtistsHandler,
+  getPagedAlbumsHandler,
+  getPagedUsersHandler,
 } from "./controllers/track.controller.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { permissionMiddleware } from "./middleware/permission.js";
@@ -77,10 +84,14 @@ app.get("/home", optionalAuthMiddleware, getHomePageHandler);
 
 // -- Tracks -- //
 app.get("/tracks", optionalAuthMiddleware, getAllTracksHandler);
+app.get("/tracks/paged", getPagedTracksHandler);
 app.get("/tracks/:id", optionalAuthMiddleware, getTrackByIdHandler);
 app.get("/tracks/:id/stream", optionalAuthMiddleware, streamTrackHandler);
 app.get("/tracks/:id/play-count", authMiddleware, getPlayCountHandler);
 app.get("/tracks/top-played", authMiddleware, getTopPlayedTracksHandler);
+app.post("/tracks/:id/analyze", authMiddleware, analyzeTrackHandler);
+app.post("/tracks/analyze-batch", authMiddleware, analyzeBatchTracksHandler);
+app.get("/tracks/:id/similar", optionalAuthMiddleware, getSimilarTracksHandler);
 app.delete(
   "/tracks/:id",
   authMiddleware,
@@ -97,6 +108,7 @@ app.get("/reactions", authMiddleware, getReactedTracksHandler);
 
 // -- Albums -- //
 app.get("/albums", optionalAuthMiddleware, getAllAlbumsHandler);
+app.get("/albums/paged", getPagedAlbumsHandler);
 app.get("/albums/:id", optionalAuthMiddleware, getAlbumWithTracksHandler);
 app.get("/albums/:id/cover", streamAlbumCoverHandler);
 
@@ -110,6 +122,7 @@ app.post(
 
 // Artist routes
 app.get("/artists", getAllArtistsHandler);
+app.get("/artists/paged", getPagedArtistsHandler);
 app.get("/artists/:artistId", optionalAuthMiddleware, getArtistByIdHandler);
 app.get("/artists/:artistId/image", streamArtistImageHandler);
 app.get(
@@ -153,6 +166,14 @@ app.put(
   "/playlists/:playlistId/order",
   authMiddleware,
   updatePlaylistOrderHandler
+);
+
+// -- Users -- //
+app.get(
+  "/users/paged",
+  authMiddleware,
+  permissionMiddleware("view_users"),
+  getPagedUsersHandler
 );
 
 app.get("/", (c) => {

@@ -11,6 +11,7 @@ import {
   ListMusic,
   Menu,
   X,
+  Database,
 } from "lucide-react";
 import { NavItem } from "./nav-item";
 import { Link, useNavigate } from "react-router-dom";
@@ -137,6 +138,14 @@ export const Sidebar = ({ playlists, isOpen, onClose }: SidebarProps) => {
             to="/artists"
             onClick={onClose}
           />
+          {user?.isAdmin && (
+            <NavItem
+              icon={<Database />}
+              label="Tracks"
+              to="/admin/tracks"
+              onClick={onClose}
+            />
+          )}
         </div>
 
         <div className="space-y-2">

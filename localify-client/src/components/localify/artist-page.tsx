@@ -254,6 +254,7 @@ export const ArtistPage = ({
                   onReactionUpdate={handleReactionUpdate}
                   playlists={playlists}
                   onPlaylistsChange={onPlaylistsChange}
+                  onPlayTracks={onPlayTrack}
                 />
               ))}
             </div>
@@ -306,6 +307,7 @@ export const ArtistPage = ({
                   mimeType: "",
                   createdAt: 0,
                   updatedAt: null,
+                  path: "",
                 };
                 return (
                   <TrackItem
@@ -322,6 +324,7 @@ export const ArtistPage = ({
                     onReactionUpdate={handleReactionUpdate}
                     playlists={playlists}
                     onPlaylistsChange={onPlaylistsChange}
+                    onPlayTracks={onPlayTrack}
                   />
                 );
               })}

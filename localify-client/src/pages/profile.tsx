@@ -1,7 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getUser } from "../utils/auth";
 import { api, Track } from "../services/api";
-import { User, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  User,
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+  Pause,
+  Play,
+} from "lucide-react";
 
 interface UserProfile {
   id: number;
@@ -36,6 +43,39 @@ export const ProfilePage = () => {
     useState<IndexingResults | null>(null);
   const [indexingProgress, setIndexingProgress] =
     useState<IndexingProgress | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [totalRunningTime, setTotalRunningTime] = useState(0);
+  const [averageProcessingTime, setAverageProcessingTime] = useState(0);
+  const [analysisProgress, setAnalysisProgress] = useState<{
+    currentTrack?: {
+      id: number;
+      title: string;
+      path: string;
+      album: {
+        id: number;
+        title: string;
+      };
+    };
+    success: number;
+    failed: number;
+    total: number;
+  } | null>(null);
+  const [processedTracks, setProcessedTracks] = useState<
+    Array<{
+      id: number;
+      title: string;
+      path: string;
+      status: "success" | "failed";
+      timestamp: number;
+      album: {
+        id: number;
+        title: string;
+      };
+    }>
+  >([]);
   const [expandedSections, setExpandedSections] = useState<{
     added: boolean;
     removed: boolean;
@@ -45,6 +85,35 @@ export const ProfilePage = () => {
     removed: false,
     unchanged: false,
   });
+  const [wakeLock, setWakeLock] = useState<any>(null);
+  const isAnalyzingRef = useRef(false);
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (isAnalyzing && startTime && !isPaused) {
+      // Update time every second
+      intervalId = setInterval(() => {
+        const currentRunningTime = Math.floor((Date.now() - startTime) / 1000);
+        setTotalRunningTime(currentRunningTime);
+
+        // Update average time if we have processed any tracks
+        if (analysisProgress) {
+          const totalProcessed =
+            analysisProgress.success + analysisProgress.failed;
+          if (totalProcessed > 0) {
+            setAverageProcessingTime(currentRunningTime / totalProcessed);
+          }
+        }
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isAnalyzing, startTime, isPaused, analysisProgress]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -60,6 +129,52 @@ export const ProfilePage = () => {
     };
     loadUser();
   }, []);
+
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      if (isAnalyzing && !isPaused) {
+        try {
+          const wakeLock = await navigator.wakeLock.request("screen");
+          setWakeLock(wakeLock);
+        } catch (err) {
+          console.error("Failed to request wake lock:", err);
+        }
+      } else if (wakeLock) {
+        try {
+          await wakeLock.release();
+          setWakeLock(null);
+        } catch (err) {
+          console.error("Failed to release wake lock:", err);
+        }
+      }
+    };
+
+    requestWakeLock();
+
+    return () => {
+      if (wakeLock) {
+        wakeLock.release().catch(console.error);
+      }
+    };
+  }, [isAnalyzing, isPaused]);
+
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "visible" && isAnalyzing && !isPaused) {
+        try {
+          const newWakeLock = await navigator.wakeLock.request("screen");
+          setWakeLock(newWakeLock);
+        } catch (err) {
+          console.error("Failed to re-request wake lock:", err);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isAnalyzing, isPaused]);
 
   const handleForceIndex = async () => {
     setIsIndexing(true);
@@ -241,6 +356,101 @@ export const ProfilePage = () => {
     );
   };
 
+  const processNextBatch = async () => {
+    if (!isAnalyzingRef.current || isPaused) return;
+
+    try {
+      // Process a batch of 10 tracks
+      await api.analyzeBatch((update) => {
+        // Update running time
+        if (startTime) {
+          const currentRunningTime = Math.floor(
+            (Date.now() - startTime) / 1000
+          );
+          setTotalRunningTime(currentRunningTime);
+
+          // Calculate average processing time (in seconds)
+          const totalProcessed = update.success + update.failed;
+          if (totalProcessed > 0) {
+            setAverageProcessingTime(currentRunningTime / totalProcessed);
+          }
+        }
+
+        setAnalysisProgress({
+          currentTrack: update.currentTrack && {
+            id: update.currentTrack.id,
+            title: update.currentTrack.title,
+            path: update.currentTrack.path,
+            album: update.currentTrack.album,
+          },
+          success: update.success,
+          failed: update.failed,
+          total: update.total,
+        });
+
+        if (update.currentTrack) {
+          setProcessedTracks((prev) => [
+            {
+              id: update.currentTrack!.id,
+              title: update.currentTrack!.title,
+              path: update.currentTrack!.path,
+              album: update.currentTrack!.album,
+              status: "success",
+              timestamp: Date.now(),
+            },
+            ...prev,
+          ]);
+        }
+
+        // Clear the table if we've completed all tracks in the current batch
+        if (update.success + update.failed === update.total) {
+          setTimeout(() => {
+            setProcessedTracks([]);
+          }, 2000);
+        }
+      });
+
+      // Start next batch after a short delay
+      if (isAnalyzingRef.current && !isPaused) {
+        setTimeout(processNextBatch, 1000);
+      }
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      setAnalysisError("Failed to analyze tracks. Please try again.");
+      isAnalyzingRef.current = false;
+      setIsAnalyzing(false);
+      setIsPaused(false);
+    }
+  };
+
+  // Format time function
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${remainingSeconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+    return `${remainingSeconds}s`;
+  };
+
+  // Update the click handler for the Start Analysis button
+  const handleStartAnalysis = () => {
+    setIsAnalyzing(true);
+    isAnalyzingRef.current = true;
+    setAnalysisError(null);
+    setAnalysisProgress(null);
+    setProcessedTracks([]);
+    setIsPaused(false);
+    setStartTime(Date.now());
+    setTotalRunningTime(0);
+    setAverageProcessingTime(0);
+    processNextBatch();
+  };
+
   if (!user) return null;
 
   return (
@@ -313,6 +523,219 @@ export const ProfilePage = () => {
                       {renderTrackList(indexingResults.added, "added")}
                       {renderTrackList(indexingResults.removed, "removed")}
                       {renderTrackList(indexingResults.unchanged, "unchanged")}
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-white/10 pt-4">
+                  <h4 className="text-white/60 mb-2">Track Analysis</h4>
+                  <div className="flex items-center gap-4">
+                    {!isAnalyzing ? (
+                      <button
+                        onClick={handleStartAnalysis}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-medium hover:opacity-90 transition-opacity"
+                      >
+                        <Play className="w-5 h-5" />
+                        <span>Start Analysis</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const newPausedState = !isPaused;
+                          setIsPaused(newPausedState);
+                          if (!newPausedState) {
+                            processNextBatch();
+                          }
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-medium hover:opacity-90 transition-opacity"
+                      >
+                        {isPaused ? (
+                          <>
+                            <Play className="w-5 h-5" />
+                            <span>Resume</span>
+                          </>
+                        ) : (
+                          <>
+                            <Pause className="w-5 h-5" />
+                            <span>Pause</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {analysisError && (
+                    <p className="mt-2 text-red-500 text-sm">{analysisError}</p>
+                  )}
+
+                  {analysisProgress && (
+                    <div className="mt-4 space-y-4">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-purple-500 font-medium">
+                              Analyzing
+                            </span>
+                            {analysisProgress.currentTrack && (
+                              <span className="text-white/60">
+                                {analysisProgress.currentTrack.title}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-white/60">
+                            {Math.round(
+                              ((analysisProgress.success +
+                                analysisProgress.failed) /
+                                analysisProgress.total) *
+                                100
+                            )}
+                            %
+                          </span>
+                        </div>
+                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 transition-all duration-300"
+                            style={{
+                              width: `${
+                                ((analysisProgress.success +
+                                  analysisProgress.failed) /
+                                  analysisProgress.total) *
+                                100
+                              }%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {analysisProgress.currentTrack && (
+                        <div className="bg-white/5 rounded-lg p-3">
+                          <p className="text-sm text-white/60 mb-1">
+                            Current Track
+                          </p>
+                          <p className="text-sm text-white font-medium truncate">
+                            {analysisProgress.currentTrack.path}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-green-500/10 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 rounded-full bg-green-500" />
+                            <p className="text-green-500 font-medium">
+                              Successful
+                            </p>
+                          </div>
+                          <p className="text-2xl text-white">
+                            {analysisProgress.success}
+                          </p>
+                        </div>
+                        <div className="bg-red-500/10 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 rounded-full bg-red-500" />
+                            <p className="text-red-500 font-medium">Failed</p>
+                          </div>
+                          <p className="text-2xl text-white">
+                            {analysisProgress.failed}
+                          </p>
+                        </div>
+                        <div className="bg-blue-500/10 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                            <p className="text-blue-500 font-medium">Total</p>
+                          </div>
+                          <p className="text-2xl text-white">
+                            {analysisProgress.total}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Add new timing metrics */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-purple-500/10 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 rounded-full bg-purple-500" />
+                            <p className="text-purple-500 font-medium">
+                              Total Running Time
+                            </p>
+                          </div>
+                          <p className="text-2xl text-white">
+                            {formatTime(totalRunningTime)}
+                          </p>
+                        </div>
+                        <div className="bg-indigo-500/10 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                            <p className="text-indigo-500 font-medium">
+                              Average Processing Time
+                            </p>
+                          </div>
+                          <p className="text-2xl text-white">
+                            {averageProcessingTime.toFixed(2)}s per track
+                          </p>
+                        </div>
+                      </div>
+
+                      {processedTracks.length > 0 && (
+                        <div className="mt-6 bg-white/5 rounded-xl p-4">
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead>
+                                <tr className="text-left text-white/60 text-sm border-b border-white/10">
+                                  <th className="pb-2 font-medium">Status</th>
+                                  <th className="pb-2 font-medium">Track</th>
+                                  <th className="pb-2 font-medium">Album</th>
+                                  <th className="pb-2 font-medium">Time</th>
+                                </tr>
+                              </thead>
+                              <tbody className="text-sm">
+                                {processedTracks.map((track) => (
+                                  <tr
+                                    key={`${track.id}-${track.timestamp}`}
+                                    className="border-b border-white/5 last:border-0"
+                                  >
+                                    <td className="py-2">
+                                      <span
+                                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                          track.status === "success"
+                                            ? "bg-green-500/10 text-green-500"
+                                            : "bg-red-500/10 text-red-500"
+                                        }`}
+                                      >
+                                        {track.status === "success"
+                                          ? "Success"
+                                          : "Failed"}
+                                      </span>
+                                    </td>
+                                    <td className="py-2">
+                                      <div className="flex items-center gap-3">
+                                        <img
+                                          src={api.getAlbumCoverUrl(
+                                            track.album.id
+                                          )}
+                                          alt={track.album.title}
+                                          className="w-10 h-10 rounded bg-white/5"
+                                        />
+                                        <span className="text-white">
+                                          {track.title}
+                                        </span>
+                                      </div>
+                                    </td>
+                                    <td className="py-2 text-white/60">
+                                      {track.album.title}
+                                    </td>
+                                    <td className="py-2 text-white/60">
+                                      {new Date(
+                                        track.timestamp
+                                      ).toLocaleTimeString()}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

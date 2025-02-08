@@ -7,9 +7,10 @@ import {
   PlusCircle,
   ListMusic,
   Music,
+  Radio,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { ReactionType, Playlist, api } from "../../services/api";
+import { useState } from "react";
+import { ReactionType, Playlist, api, Track } from "../../services/api";
 import { ContextMenu } from "../ui/context-menu";
 import { Modal } from "../ui/modal";
 
@@ -28,6 +29,7 @@ interface TrackItemProps {
   onPlaylistsChange?: (playlists: Playlist[]) => void;
   showArt?: boolean;
   albumId?: number;
+  onPlayTracks?: (tracks: Track[], startIndex: number) => void;
 }
 
 export const TrackItem = ({
@@ -45,6 +47,7 @@ export const TrackItem = ({
   onPlaylistsChange,
   showArt,
   albumId,
+  onPlayTracks,
 }: TrackItemProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
@@ -118,6 +121,17 @@ export const TrackItem = ({
       console.error("Failed to set reaction:", error);
     } finally {
       setReactionLoading(false);
+    }
+  };
+
+  const handleStartRadio = async () => {
+    try {
+      const similarTracks = await api.getSimilarTracks(trackId);
+      if (similarTracks.length > 0 && onPlayTracks) {
+        onPlayTracks([...similarTracks], 0);
+      }
+    } catch (error) {
+      console.error("Failed to start radio:", error);
     }
   };
 
@@ -238,6 +252,14 @@ export const TrackItem = ({
             </div>
             <ContextMenu
               items={[
+                {
+                  label: "Start Radio",
+                  icon: <Radio className="w-4 h-4" />,
+                  onClick: (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    handleStartRadio();
+                  },
+                },
                 {
                   label: "Add to Playlist",
                   icon: <ListMusic className="w-4 h-4" />,

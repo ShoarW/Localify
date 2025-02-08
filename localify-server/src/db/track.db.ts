@@ -113,6 +113,16 @@ export function createTracksTable(db: Database) {
     );
     `
   ).run();
+
+  // Create embedded_tracks table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS embedded_tracks (
+      track_id INTEGER PRIMARY KEY,
+      is_embedded BOOLEAN DEFAULT 0,
+      embedded_at INTEGER,
+      FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+    )
+  `);
 }
 
 // Album-related functions
@@ -1370,4 +1380,45 @@ export function getListenAgain(
     lastPlayed: number;
     artistName: string | null;
   })[];
+}
+
+export function getTrackWithPath(
+  db: Database,
+  trackId: number
+): { id: number; path: string } | undefined {
+  return db
+    .prepare(
+      `
+    SELECT id, path
+    FROM tracks
+    WHERE id = ?
+  `
+    )
+    .get(trackId) as { id: number; path: string } | undefined;
+}
+
+export function markTrackAsEmbedded(db: Database, trackId: number): void {
+  db.prepare(
+    `
+    INSERT OR REPLACE INTO embedded_tracks (track_id, is_embedded, embedded_at)
+    VALUES (?, 1, ?)
+  `
+  ).run(trackId, Date.now());
+}
+
+export function getTracksToEmbed(
+  db: Database,
+  limit: number
+): { id: number; path: string }[] {
+  return db
+    .prepare(
+      `
+    SELECT t.id, t.path
+    FROM tracks t
+    LEFT JOIN embedded_tracks e ON t.id = e.track_id
+    WHERE e.is_embedded IS NULL OR e.is_embedded = 0
+    LIMIT ?
+  `
+    )
+    .all(limit) as { id: number; path: string }[];
 }

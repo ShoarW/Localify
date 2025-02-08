@@ -186,6 +186,7 @@ export const AlbumPage = ({
               onReactionUpdate={handleReactionUpdate}
               playlists={playlists}
               onPlaylistsChange={onPlaylistsChange}
+              onPlayTracks={onPlayAlbum}
             />
           ))}
         </div>

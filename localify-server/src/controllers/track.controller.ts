@@ -27,6 +27,13 @@ import {
   getPlayCount,
   getTopPlayedTracks,
   getHomePageContent,
+  analyzeTrack,
+  analyzeBatchTracks,
+  getSimilarTracks,
+  getPagedTracks,
+  getPagedArtists,
+  getPagedAlbums,
+  getPagedUsers,
 } from "../services/track.service.js";
 import { config } from "../config.js";
 import fs from "fs";
@@ -915,5 +922,186 @@ export async function getHomePageHandler(c: Context) {
   } catch (error) {
     console.error("Error getting homepage content:", error);
     return c.json({ error: "Failed to get homepage content" }, 500);
+  }
+}
+
+export async function analyzeTrackHandler(c: Context) {
+  const id = parseInt(c.req.param("id"));
+  if (isNaN(id)) {
+    return c.json({ error: "Invalid track ID." }, 400);
+  }
+
+  const success = await analyzeTrack(id);
+  if (!success) {
+    return c.json({ error: "Failed to analyze track." }, 500);
+  }
+
+  return c.json({ message: "Track analysis completed successfully" });
+}
+
+export async function analyzeBatchTracksHandler(c: Context) {
+  const batchSize = parseInt(c.req.query("batchSize") || "10");
+
+  if (isNaN(batchSize) || batchSize < 1 || batchSize > 50) {
+    return c.json(
+      { error: "Invalid batch size (must be between 1 and 50)" },
+      400
+    );
+  }
+
+  try {
+    // Set streaming response headers
+    c.header("Content-Type", "text/event-stream");
+    c.header("Cache-Control", "no-cache");
+    c.header("Connection", "keep-alive");
+
+    // Create a readable stream that we can write to
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          // Helper function to send updates
+          const sendUpdate = (data: any) => {
+            controller.enqueue(
+              new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`)
+            );
+          };
+
+          // Process batch with progress updates
+          await analyzeBatchTracks(batchSize, (progress) => {
+            sendUpdate({
+              ...progress,
+              type: "analysis_progress",
+            });
+          });
+
+          controller.close();
+        } catch (error) {
+          console.error("Batch analysis error:", error);
+          controller.error(error);
+        }
+      },
+    });
+
+    return c.body(readable);
+  } catch (error) {
+    console.error("Error in batch analysis:", error);
+    return c.json({ error: "Failed to process batch analysis" }, 500);
+  }
+}
+
+export async function getSimilarTracksHandler(c: Context) {
+  try {
+    const trackId = parseInt(c.req.param("id"));
+    if (isNaN(trackId)) {
+      return c.json({ error: "Invalid track ID" }, 400);
+    }
+
+    const limit = parseInt(c.req.query("limit") || "5");
+    if (isNaN(limit) || limit < 1 || limit > 20) {
+      return c.json({ error: "Invalid limit. Must be between 1 and 20" }, 400);
+    }
+
+    const userId = c.get("userId") as number | null;
+    const tracks = await getSimilarTracks(trackId, userId, limit);
+    return c.json(tracks);
+  } catch (error) {
+    console.error("Error getting similar tracks:", error);
+    return c.json({ error: "Failed to get similar tracks" }, 500);
+  }
+}
+
+export async function getPagedTracksHandler(c: Context) {
+  const page = parseInt(c.req.query("page") || "1");
+  const pageSize = parseInt(c.req.query("pageSize") || "50");
+
+  if (isNaN(page) || page < 1) {
+    return c.json({ error: "Invalid page number" }, 400);
+  }
+
+  if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
+    return c.json(
+      { error: "Invalid page size (must be between 1 and 100)" },
+      400
+    );
+  }
+
+  try {
+    const result = await getPagedTracks(page, pageSize);
+    return c.json(result);
+  } catch (error) {
+    console.error("Error getting paged tracks:", error);
+    return c.json({ error: "Failed to get tracks" }, 500);
+  }
+}
+
+export async function getPagedArtistsHandler(c: Context) {
+  const page = parseInt(c.req.query("page") || "1");
+  const pageSize = parseInt(c.req.query("pageSize") || "50");
+
+  if (isNaN(page) || page < 1) {
+    return c.json({ error: "Invalid page number" }, 400);
+  }
+
+  if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
+    return c.json(
+      { error: "Invalid page size (must be between 1 and 100)" },
+      400
+    );
+  }
+
+  try {
+    const result = await getPagedArtists(page, pageSize);
+    return c.json(result);
+  } catch (error) {
+    console.error("Error getting paged artists:", error);
+    return c.json({ error: "Failed to get artists" }, 500);
+  }
+}
+
+export async function getPagedAlbumsHandler(c: Context) {
+  const page = parseInt(c.req.query("page") || "1");
+  const pageSize = parseInt(c.req.query("pageSize") || "50");
+
+  if (isNaN(page) || page < 1) {
+    return c.json({ error: "Invalid page number" }, 400);
+  }
+
+  if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
+    return c.json(
+      { error: "Invalid page size (must be between 1 and 100)" },
+      400
+    );
+  }
+
+  try {
+    const result = await getPagedAlbums(page, pageSize);
+    return c.json(result);
+  } catch (error) {
+    console.error("Error getting paged albums:", error);
+    return c.json({ error: "Failed to get albums" }, 500);
+  }
+}
+
+export async function getPagedUsersHandler(c: Context) {
+  const page = parseInt(c.req.query("page") || "1");
+  const pageSize = parseInt(c.req.query("pageSize") || "50");
+
+  if (isNaN(page) || page < 1) {
+    return c.json({ error: "Invalid page number" }, 400);
+  }
+
+  if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
+    return c.json(
+      { error: "Invalid page size (must be between 1 and 100)" },
+      400
+    );
+  }
+
+  try {
+    const result = await getPagedUsers(page, pageSize);
+    return c.json(result);
+  } catch (error) {
+    console.error("Error getting paged users:", error);
+    return c.json({ error: "Failed to get users" }, 500);
   }
 }
