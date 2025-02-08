@@ -368,8 +368,78 @@ export async function getTrackByPath(
 export async function getTrackById(
   id: number,
   userId: number | null = null
-): Promise<(Track & { reaction: "like" | "dislike" | null }) | undefined> {
-  return dbGetTrackByIdWithReaction(db, id, userId);
+): Promise<
+  | (Track & {
+      reaction: "like" | "dislike" | null;
+      albumHasImage: boolean | null;
+    })
+  | undefined
+> {
+  return getTrackByIdWithReaction(db, id, userId);
+}
+
+export function getTrackByIdWithReaction(
+  db: Database,
+  id: number,
+  userId: number | null
+):
+  | (Track & {
+      reaction: "like" | "dislike" | null;
+      albumHasImage: boolean | null;
+    })
+  | undefined {
+  if (!userId) {
+    return db
+      .prepare(
+        `
+        SELECT 
+          t.id,
+          t.title,
+          t.genre,
+          t.duration,
+          t.albumId,
+          ar.name as artistName,
+          NULL as reaction,
+          CASE WHEN al.coverPath IS NOT NULL THEN 1 ELSE 0 END as albumHasImage
+        FROM tracks t
+        LEFT JOIN artists ar ON t.artistId = ar.id
+        LEFT JOIN albums al ON t.albumId = al.id
+        WHERE t.id = ?
+      `
+      )
+      .get(id) as
+      | (Track & {
+          reaction: "like" | "dislike" | null;
+          albumHasImage: boolean | null;
+        })
+      | undefined;
+  }
+
+  return db
+    .prepare(
+      `
+      SELECT 
+        t.id,
+        t.title,
+        t.genre,
+        t.duration,
+        t.albumId,
+        ar.name as artistName,
+        r.type as reaction,
+        CASE WHEN al.coverPath IS NOT NULL THEN 1 ELSE 0 END as albumHasImage
+      FROM tracks t
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists ar ON t.artistId = ar.id
+      LEFT JOIN albums al ON t.albumId = al.id
+      WHERE t.id = ?
+    `
+    )
+    .get(userId, id) as
+    | (Track & {
+        reaction: "like" | "dislike" | null;
+        albumHasImage: boolean | null;
+      })
+    | undefined;
 }
 
 export async function deleteTrack(id: number): Promise<boolean> {
@@ -580,12 +650,34 @@ export async function getArtistById(
         updatedAt: string | null;
       };
       randomTracks: (Track & { reaction: "like" | "dislike" | null })[];
-      albums: (Album & { trackCount: number })[];
+      albums: (Album & {
+        trackCount: number;
+        type: "single" | "ep" | "album";
+        hasImage: boolean;
+      })[];
       singles: (Track & { reaction: "like" | "dislike" | null })[];
     }
   | undefined
 > {
-  return dbGetArtistById(db, artistId, userId);
+  const result = await dbGetArtistById(db, artistId, userId);
+  if (!result) return undefined;
+
+  // Transform the result to match the expected type
+  return {
+    artist: {
+      id: result.artist.id,
+      name: result.artist.name,
+      description: result.artist.description,
+      imagePath: result.artist.hasImage
+        ? `/assets/artist/${result.artist.id}.jpg`
+        : null,
+      createdAt: new Date().toISOString(), // This is a temporary fix, should come from DB
+      updatedAt: null, // This is a temporary fix, should come from DB
+    },
+    randomTracks: result.randomTracks,
+    albums: result.albums,
+    singles: result.singles,
+  };
 }
 
 export async function getAllArtists(): Promise<
@@ -598,7 +690,17 @@ export async function getAllArtists(): Promise<
     albumCount: number;
   }[]
 > {
-  return dbGetAllArtists(db);
+  const artists = await dbGetAllArtists(db);
+
+  // Transform the results to match the expected type
+  return artists.map((artist) => ({
+    id: artist.id,
+    name: artist.name,
+    description: artist.description,
+    imagePath: artist.hasImage ? `/assets/artist/${artist.id}.jpg` : null,
+    trackCount: artist.trackCount,
+    albumCount: artist.albumCount,
+  }));
 }
 
 export async function createOrUpdateArtist(artist: {
@@ -678,4 +780,156 @@ export async function getHomePageContent(
     listenAgain,
     featuredPlaylists: [], // Empty for now
   };
+}
+
+export function getAllTracksWithReactions(
+  db: Database,
+  userId: number | null
+): (Track & {
+  reaction: "like" | "dislike" | null;
+  albumHasImage: boolean | null;
+})[] {
+  if (!userId) {
+    return db
+      .prepare(
+        `
+        SELECT 
+          t.id,
+          t.title,
+          t.genre,
+          t.duration,
+          t.albumId,
+          ar.name as artistName,
+          NULL as reaction,
+          CASE WHEN al.coverPath IS NOT NULL THEN 1 ELSE 0 END as albumHasImage
+        FROM tracks t
+        LEFT JOIN artists ar ON t.artistId = ar.id
+        LEFT JOIN albums al ON t.albumId = al.id
+        ORDER BY t.id ASC
+      `
+      )
+      .all() as (Track & {
+      reaction: "like" | "dislike" | null;
+      albumHasImage: boolean | null;
+    })[];
+  }
+
+  return db
+    .prepare(
+      `
+      SELECT 
+        t.id,
+        t.title,
+        t.genre,
+        t.duration,
+        t.albumId,
+        ar.name as artistName,
+        r.type as reaction,
+        CASE WHEN al.coverPath IS NOT NULL THEN 1 ELSE 0 END as albumHasImage
+      FROM tracks t
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists ar ON t.artistId = ar.id
+      LEFT JOIN albums al ON t.albumId = al.id
+      ORDER BY t.id ASC
+    `
+    )
+    .all(userId) as (Track & {
+    reaction: "like" | "dislike" | null;
+    albumHasImage: boolean | null;
+  })[];
+}
+
+export function searchTracksWithReactions(
+  db: Database,
+  query: string,
+  userId: number | null
+): (Track & {
+  reaction: "like" | "dislike" | null;
+  albumHasImage: boolean | null;
+})[] {
+  if (!userId) {
+    const searchTerm = `%${query}%`;
+    return db
+      .prepare(
+        `
+        SELECT 
+          t.id,
+          t.title,
+          t.genre,
+          t.duration,
+          t.albumId,
+          NULL as reaction,
+          ar.name as artistName,
+          CASE WHEN al.coverPath IS NOT NULL THEN 1 ELSE 0 END as albumHasImage
+        FROM tracks t
+        LEFT JOIN artists ar ON t.artistId = ar.id
+        LEFT JOIN albums al ON t.albumId = al.id
+        WHERE t.title LIKE ? 
+           OR ar.name LIKE ? 
+           OR al.title LIKE ? 
+           OR t.filename LIKE ?
+        ORDER BY 
+          CASE 
+            WHEN t.title LIKE ? THEN 1
+            WHEN ar.name LIKE ? THEN 2
+            ELSE 3
+          END,
+          t.title ASC
+        `
+      )
+      .all(
+        searchTerm,
+        searchTerm,
+        searchTerm,
+        searchTerm,
+        searchTerm,
+        searchTerm
+      ) as (Track & {
+      reaction: "like" | "dislike" | null;
+      albumHasImage: boolean | null;
+    })[];
+  }
+
+  const searchTerm = `%${query}%`;
+  return db
+    .prepare(
+      `
+      SELECT 
+        t.id,
+        t.title,
+        t.genre,
+        t.duration,
+        t.albumId,
+        r.type as reaction,
+        ar.name as artistName,
+        CASE WHEN al.coverPath IS NOT NULL THEN 1 ELSE 0 END as albumHasImage
+      FROM tracks t
+      LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists ar ON t.artistId = ar.id
+      LEFT JOIN albums al ON t.albumId = al.id
+      WHERE t.title LIKE ? 
+         OR ar.name LIKE ? 
+         OR al.title LIKE ? 
+         OR t.filename LIKE ?
+      ORDER BY 
+        CASE 
+          WHEN t.title LIKE ? THEN 1
+          WHEN ar.name LIKE ? THEN 2
+          ELSE 3
+        END,
+        t.title ASC
+    `
+    )
+    .all(
+      userId,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm
+    ) as (Track & {
+    reaction: "like" | "dislike" | null;
+    albumHasImage: boolean | null;
+  })[];
 }

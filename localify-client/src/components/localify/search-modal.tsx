@@ -2,6 +2,7 @@ import { Search, X, Music, User, Play } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { api, SearchResults, Track } from "../../services/api";
 import { Link } from "react-router-dom";
+import { PlaceholderImage } from "./placeholder-image";
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -160,8 +161,7 @@ export const SearchModal = ({
 
   const handleTrackClick = async (track: SearchResults["tracks"][0]) => {
     try {
-      const albumData = await api.getAlbum(track.albumId);
-      const fullTrack = albumData.tracks.find((t) => t.id === track.id);
+      const fullTrack = await api.getTrack(track.id);
       if (fullTrack) {
         onPlayTrack(fullTrack);
         handleClose();
@@ -245,41 +245,13 @@ export const SearchModal = ({
                           className="flex items-center justify-between p-3"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center overflow-hidden">
-                              {artist.hasImage ? (
-                                <img
-                                  src={`${api.getArtistImageUrl(
-                                    artist.id
-                                  )}?t=${Date.now()}`}
-                                  alt={artist.name}
-                                  className="w-10 h-10 object-cover"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    const parent = target.parentElement;
-                                    if (!parent) return;
-
-                                    // Clean up any existing fallback icons
-                                    const existingIcons =
-                                      parent.querySelectorAll(".fallback-icon");
-                                    existingIcons.forEach((icon) =>
-                                      icon.remove()
-                                    );
-
-                                    // Hide the failed image
-                                    target.style.display = "none";
-
-                                    // Add new icon with a class for future cleanup
-                                    const icon = document.createElement("div");
-                                    icon.className = "fallback-icon";
-                                    icon.innerHTML =
-                                      '<svg class="w-5 h-5 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-                                    parent.appendChild(icon);
-                                  }}
-                                />
-                              ) : (
-                                <User className="w-5 h-5 text-white/40" />
-                              )}
-                            </div>
+                            <PlaceholderImage
+                              type="artist"
+                              id={artist.id}
+                              hasImage={!!artist.hasImage}
+                              size="sm"
+                              rounded="full"
+                            />
                             <div>
                               <p className="text-white font-medium">
                                 {artist.name}
@@ -320,17 +292,12 @@ export const SearchModal = ({
                           className="flex items-center justify-between p-3"
                         >
                           <div className="flex items-center gap-3">
-                            {album.hasImage ? (
-                              <img
-                                src={api.getAlbumCoverUrl(album.id)}
-                                alt={album.title}
-                                className="w-10 h-10 object-cover rounded-xl"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
-                                <Music className="w-5 h-5 text-white/40" />
-                              </div>
-                            )}
+                            <PlaceholderImage
+                              type="album"
+                              id={album.id}
+                              hasImage={!!album.hasImage}
+                              size="sm"
+                            />
                             <div>
                               <p className="text-white font-medium">
                                 {album.title}
@@ -367,12 +334,20 @@ export const SearchModal = ({
                         onClick={() => handleTrackClick(track)}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center relative group-hover:bg-gradient-to-r group-hover:from-red-500 group-hover:to-rose-600 transition-all duration-300">
-                            <Music className="w-5 h-5 text-white/40 group-hover:hidden" />
-                            <Play
-                              className="w-5 h-5 text-white hidden group-hover:block"
-                              fill="white"
+                          <div className="relative w-10 aspect-square shrink-0">
+                            <PlaceholderImage
+                              type="album"
+                              id={track.albumId}
+                              hasImage={track.hasImage}
+                              size="sm"
+                              className="absolute inset-0 group-hover:opacity-0 transition-opacity"
                             />
+                            <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg">
+                              <Play
+                                className="w-5 h-5 text-white"
+                                fill="white"
+                              />
+                            </div>
                           </div>
                           <div>
                             <p className="text-white font-medium">

@@ -111,6 +111,8 @@ export interface SearchResults {
     duration: number;
     reaction: ReactionType;
     artistName: string;
+    albumId: number;
+    hasImage: boolean;
   }[];
 }
 
@@ -710,6 +712,13 @@ export const api = {
       throw new Error("Failed to fetch home content");
     }
 
+    return response.json();
+  },
+
+  // Add new endpoint to get track details
+  getTrack: async (id: number): Promise<Track> => {
+    const response = await fetchWithToken(`${API_BASE_URL}/tracks/${id}`);
+    if (!response.ok) throw new Error("Failed to fetch track");
     return response.json();
   },
 };

@@ -1,7 +1,8 @@
 import { Album } from "../../services/api";
 import { api } from "../../services/api";
 import { Link } from "react-router-dom";
-import { Music, Play } from "lucide-react";
+import { Play } from "lucide-react";
+import { PlaceholderImage } from "./placeholder-image";
 
 interface AlbumCardProps {
   album: Album;
@@ -22,17 +23,13 @@ export const AlbumCard = ({ album, onPlay }: AlbumCardProps) => {
     >
       <div className="relative aspect-square overflow-hidden rounded-lg">
         <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
-        {album.hasImage ? (
-          <img
-            src={api.getAlbumCoverUrl(album.id)}
-            alt={album.title}
-            className="w-full h-full object-cover rounded-xl"
-          />
-        ) : (
-          <div className="w-full h-full rounded-lg bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
-            <Music className="w-12 h-12 text-white/40" />
-          </div>
-        )}
+        <PlaceholderImage
+          type="album"
+          id={album.id}
+          hasImage={album.hasImage}
+          size="xl"
+          className="w-full h-full"
+        />
         {onPlay && (
           <button
             onClick={handlePlayClick}

@@ -4,6 +4,7 @@ import { AlbumWithTracks, Track, api, Playlist } from "../../services/api";
 import { Play, Shuffle } from "lucide-react";
 import { TrackItem } from "./track-item";
 import { Link } from "react-router-dom";
+import { PlaceholderImage } from "./placeholder-image";
 
 interface AlbumPageProps {
   currentTrackId: number | null;
@@ -92,10 +93,13 @@ export const AlbumPage = ({
           <div className="relative group shrink-0">
             <div className="absolute -inset-2 rounded-2xl bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
             <div className="relative w-60 h-60">
-              <img
-                src={api.getAlbumCoverUrl(album.id)}
-                alt={album.title}
-                className="w-full h-full object-cover rounded-xl shadow-2xl transition-transform duration-300 group-hover:scale-105"
+              <PlaceholderImage
+                type="album"
+                id={album.id}
+                hasImage={album.hasImage}
+                size="xl"
+                rounded="lg"
+                className="w-full h-full shadow-2xl transition-transform duration-300 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-xl flex items-center justify-center transform group-hover:scale-105">
                 <button
@@ -137,26 +141,14 @@ export const AlbumPage = ({
                 </button>
               </div>
               <div className="flex items-center gap-2 text-white/60 text-sm">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-white/10 to-white/5 shrink-0 overflow-hidden flex items-center justify-center">
-                  <img
-                    src={api.getArtistImageUrl(album.artistId)}
-                    alt={album.artist}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = "none";
-                      target.parentElement?.classList.add(
-                        "flex",
-                        "items-center",
-                        "justify-center"
-                      );
-                      const icon = document.createElement("div");
-                      icon.innerHTML =
-                        '<svg class="w-3 h-3 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-                      target.parentElement?.appendChild(icon);
-                    }}
-                  />
-                </div>
+                <PlaceholderImage
+                  type="artist"
+                  id={album.artistId}
+                  hasImage={true}
+                  size="sm"
+                  rounded="full"
+                  className="shrink-0"
+                />
                 <Link
                   to={`/artists/${album.artistId}`}
                   className="text-white font-medium truncate hover:text-white/80 transition-colors"

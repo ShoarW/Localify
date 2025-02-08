@@ -20,6 +20,7 @@ import { api, Track } from "../../services/api";
 import { Link } from "react-router-dom";
 import { usePlayer } from "../../hooks/use-player";
 import { updateFavicon } from "../../utils/favicon";
+import { PlaceholderImage } from "./placeholder-image";
 
 // Add these props to the MusicPlayer component
 interface MusicPlayerProps {
@@ -676,43 +677,27 @@ export const MusicPlayer = ({
                     }`}
                     onClick={() => setCurrentTrackIndex(index)}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-white/10 to-white/5 shrink-0 overflow-hidden flex items-center justify-center">
-                      {track.albumId ? (
-                        <img
-                          src={api.getAlbumCoverUrl(track.albumId)}
-                          alt={track.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = "none";
-                            target.parentElement?.classList.add(
-                              "flex",
-                              "items-center",
-                              "justify-center"
-                            );
-                            const icon = document.createElement("div");
-                            icon.innerHTML =
-                              '<svg class="w-5 h-5 text-white/40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
-                            target.parentElement?.appendChild(icon);
-                          }}
-                        />
-                      ) : (
-                        <Music className="w-5 h-5 text-white/40" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-sm font-medium truncate ${
-                          index === currentTrackIndex
-                            ? "text-red-500"
-                            : "text-white"
-                        }`}
-                      >
-                        {track.title}
-                      </p>
-                      <p className="text-sm text-white/60 truncate">
-                        {track.artistName}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <PlaceholderImage
+                        type="album"
+                        id={track.albumId}
+                        hasImage={track.albumId !== undefined}
+                        size="sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-sm font-medium truncate ${
+                            index === currentTrackIndex
+                              ? "text-red-500"
+                              : "text-white"
+                          }`}
+                        >
+                          {track.title}
+                        </p>
+                        <p className="text-sm text-white/60 truncate">
+                          {track.artistName}
+                        </p>
+                      </div>
                     </div>
                     {index === currentTrackIndex && isPlaying && (
                       <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
