@@ -46,6 +46,7 @@ export function createTracksTable(db: Database) {
         artistString TEXT,
         albumId INTEGER,
         genre TEXT,
+        year INTEGER,
         duration REAL,
         mimeType TEXT NOT NULL,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,

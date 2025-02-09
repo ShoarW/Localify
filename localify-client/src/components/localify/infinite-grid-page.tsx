@@ -15,7 +15,8 @@ interface InfiniteGridPageProps<T> {
   className?: string;
 }
 
-export function InfiniteGridPage<T>({
+// Inner component that handles the actual grid functionality
+function InfiniteGridPageInner<T>({
   title,
   fetchItems,
   renderItem,
@@ -28,27 +29,53 @@ export function InfiniteGridPage<T>({
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const loaderRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const requestInProgressRef = useRef<boolean>(false);
+  const initialLoadDoneRef = useRef<boolean>(false);
 
   const loadMore = useCallback(async () => {
-    if (isLoading || !hasMore) return;
+    // Prevent concurrent requests and duplicate initial loads
+    if (requestInProgressRef.current || !hasMore) return;
+    if (currentPage === 1 && initialLoadDoneRef.current) return;
 
+    requestInProgressRef.current = true;
     setIsLoading(true);
+
     try {
       const data = await fetchItems(currentPage, pageSize);
       setItems((prev) => [...prev, ...data.items]);
       setHasMore(currentPage < data.totalPages);
       setCurrentPage((prev) => prev + 1);
+      if (currentPage === 1) {
+        initialLoadDoneRef.current = true;
+      }
     } catch (error) {
       console.error("Failed to fetch items:", error);
     } finally {
       setIsLoading(false);
+      requestInProgressRef.current = false;
     }
-  }, [currentPage, pageSize, isLoading, hasMore, fetchItems]);
+  }, [currentPage, pageSize, hasMore, fetchItems]);
 
+  // Load first page on mount
   useEffect(() => {
-    const observer = new IntersectionObserver(
+    loadMore();
+    // Cleanup on unmount
+    return () => {
+      initialLoadDoneRef.current = false;
+      requestInProgressRef.current = false;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Set up intersection observer
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
+        if (
+          entries[0].isIntersecting &&
+          !requestInProgressRef.current &&
+          hasMore
+        ) {
           loadMore();
         }
       },
@@ -56,16 +83,15 @@ export function InfiniteGridPage<T>({
     );
 
     if (loaderRef.current) {
-      observer.observe(loaderRef.current);
+      observerRef.current.observe(loaderRef.current);
     }
 
-    return () => observer.disconnect();
-  }, [loadMore]);
-
-  // Initial load
-  useEffect(() => {
-    loadMore();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMore, loadMore]);
 
   return (
     <div className={`flex-1 p-8 overflow-y-auto ${className}`}>
@@ -89,4 +115,10 @@ export function InfiniteGridPage<T>({
       </div>
     </div>
   );
+}
+
+// Wrapper component that forces remount when fetchItems changes
+export function InfiniteGridPage<T>(props: InfiniteGridPageProps<T>) {
+  // Use fetchItems as a key to force remount when it changes
+  return <InfiniteGridPageInner key={props.fetchItems.toString()} {...props} />;
 }

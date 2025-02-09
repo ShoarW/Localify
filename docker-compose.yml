@@ -12,9 +12,9 @@ services:
       - PORT=3000
       - STORAGE_PATH=/app/data/storage
       - MEDIA_PATH=/app/data/media
-      - DB_NAME=/app/data/localify.db
+      - DB_NAME=localify.db
       - JWT_SECRET=${JWT_SECRET:-your_default_jwt_secret}
     volumes:
-      - ./data:/app/data
-      - ${MEDIA_PATH:-./music}:/app/data/media:ro
+      - ./data/storage:/app/data/storage
+      - ./data/media:/app/data/media
     restart: unless-stopped 

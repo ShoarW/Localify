@@ -1,6 +1,6 @@
 export const config = {
   STORAGE_PATH: process.env.STORAGE_PATH || './localify-storage',
-  MEDIA_PATH: process.env.MEDIA_PATH || '\\\\192.168.1.9\\music',
+  MEDIA_PATH: process.env.MEDIA_PATH || './localify-media',
   DB_NAME: process.env.DB_NAME || 'localify.db',
   JWT_SECRET:
     process.env.JWT_SECRET ||

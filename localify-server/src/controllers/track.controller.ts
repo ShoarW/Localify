@@ -715,6 +715,10 @@ export async function createOrUpdateArtistHandler(c: Context) {
         artist.backgroundImagePath = existingArtist.backgroundImagePath;
       }
     }
+    
+    // Ensure the artist assets directory exists
+    const artistAssetsPath = path.join(config.STORAGE_PATH, "assets", "artist");
+    await fs.promises.mkdir(artistAssetsPath, { recursive: true });
 
     // Handle image upload if provided
     if (imageFile) {

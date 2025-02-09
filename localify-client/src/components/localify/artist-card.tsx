@@ -34,10 +34,6 @@ export const ArtistCard = ({ artist }: ArtistCardProps) => {
       </div>
       <div className="flex flex-col gap-1">
         <h3 className="text-white font-medium truncate">{artist.name}</h3>
-        <p className="text-white/60 text-sm truncate">
-          {artist.albumCount} {artist.albumCount === 1 ? "album" : "albums"} •{" "}
-          {artist.trackCount} {artist.trackCount === 1 ? "track" : "tracks"}
-        </p>
         {artist.description && (
           <p className="text-white/40 text-sm line-clamp-2">
             {artist.description}

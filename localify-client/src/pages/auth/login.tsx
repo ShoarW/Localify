@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
 import { Music } from "lucide-react";
+import { useTheme } from "../../contexts/theme-context";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
+  const { gradientFrom, gradientTo } = useTheme();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +19,6 @@ export const LoginPage = () => {
 
     try {
       await api.login({ username, password });
-
       navigate("/");
     } catch (error) {
       setError("Invalid username or password");
@@ -31,7 +32,9 @@ export const LoginPage = () => {
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-red-500 to-rose-600">
+          <div
+            className={`p-2 rounded-xl bg-gradient-to-br ${gradientFrom} ${gradientTo}`}
+          >
             <Music className="w-6 h-6 text-white" />
           </div>
           <span className="text-white text-2xl font-bold tracking-wider">
@@ -52,7 +55,10 @@ export const LoginPage = () => {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-red-500 transition-colors"
+                className={`w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-${gradientFrom.replace(
+                  "from-",
+                  ""
+                )} transition-colors`}
                 required
               />
             </div>
@@ -66,7 +72,10 @@ export const LoginPage = () => {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-red-500 transition-colors"
+                className={`w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-${gradientFrom.replace(
+                  "from-",
+                  ""
+                )} transition-colors`}
                 required
               />
             </div>
@@ -80,7 +89,7 @@ export const LoginPage = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full py-3 rounded-xl bg-gradient-to-r ${gradientFrom} ${gradientTo} text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto" />
@@ -94,7 +103,13 @@ export const LoginPage = () => {
             Don't have an account?{" "}
             <Link
               to="/auth/register"
-              className="text-red-500 hover:text-red-400 transition-colors"
+              className={`text-${gradientFrom.replace(
+                "from-",
+                ""
+              )} hover:text-${gradientFrom.replace(
+                "from-",
+                ""
+              )}-400 transition-colors`}
             >
               Sign Up
             </Link>
