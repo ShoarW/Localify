@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Playlist, api } from "../services/api";
 import { PlusCircle, Music } from "lucide-react";
 import { Modal } from "../components/ui/modal";
+import { useTheme } from "../contexts/theme-context";
 
 interface PlaylistsPageProps {
   playlists: Playlist[];
@@ -15,6 +16,7 @@ export const PlaylistsPage = ({
   isLoading,
   onPlaylistsChange,
 }: PlaylistsPageProps) => {
+  const { gradientFrom, gradientTo } = useTheme();
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
@@ -58,19 +60,24 @@ export const PlaylistsPage = ({
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+        <div
+          className={`w-8 h-8 border-2 border-white/20 border-t-${gradientFrom.replace(
+            "from-",
+            ""
+          )} rounded-full animate-spin`}
+        />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto hide-scrollbar backdrop-blur-xl bg-gradient-to-b from-black/50 to-black/30">
-      <div className="max-w-7xl mx-auto p-8">
+    <div className="flex-1 h-full overflow-y-auto hide-scrollbar backdrop-blur-xl bg-gradient-to-b from-black/50 to-black/30">
+      <div className="max-w-7xl mx-auto p-8 min-h-full">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-white">Your Playlists</h1>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-medium hover:opacity-90 transition-opacity"
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r ${gradientFrom} ${gradientTo} text-white font-medium hover:opacity-90 transition-opacity`}
           >
             <PlusCircle className="w-5 h-5" />
             <span>Create Playlist</span>
@@ -85,7 +92,9 @@ export const PlaylistsPage = ({
               className="group relative flex flex-col gap-4 p-4 bg-black/20 hover:bg-black/40 rounded-lg transition-all duration-300"
             >
               <div className="relative aspect-square overflow-hidden rounded-lg bg-white/5">
-                <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
+                <div
+                  className={`absolute -inset-1 rounded-lg bg-gradient-to-r ${gradientFrom} ${gradientTo} opacity-0 group-hover:opacity-20 blur transition-all duration-300`}
+                />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Music className="w-12 h-12 text-white/20" />
                 </div>
@@ -127,7 +136,10 @@ export const PlaylistsPage = ({
               type="text"
               value={newPlaylistName}
               onChange={(e) => setNewPlaylistName(e.target.value)}
-              className="w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-red-500 transition-colors"
+              className={`w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-${gradientFrom.replace(
+                "from-",
+                ""
+              )} transition-colors`}
               placeholder="My Awesome Playlist"
             />
           </div>
@@ -138,7 +150,10 @@ export const PlaylistsPage = ({
             <textarea
               value={newPlaylistDescription}
               onChange={(e) => setNewPlaylistDescription(e.target.value)}
-              className="w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-red-500 transition-colors"
+              className={`w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-${gradientFrom.replace(
+                "from-",
+                ""
+              )} transition-colors`}
               placeholder="A collection of my favorite tracks"
               rows={3}
             />
@@ -153,7 +168,7 @@ export const PlaylistsPage = ({
             <button
               onClick={handleCreatePlaylist}
               disabled={!newPlaylistName.trim() || isCreating}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r ${gradientFrom} ${gradientTo} text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {isCreating ? (
                 <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />

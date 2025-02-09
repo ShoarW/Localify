@@ -1,14 +1,15 @@
 // src/services/user.service.ts
-import { db } from '../db/db.js';
-import * as userDB from '../db/user.db.js';
-import type { SignupUser, User } from '../types/model.js';
-import { sign, verify } from 'hono/jwt';
-import { config } from '../config.js';
+import { db } from "../db/db.js";
+import * as userDB from "../db/user.db.js";
+import type { SignupUser, User } from "../types/model.js";
+import { sign, verify } from "hono/jwt";
+import { config } from "../config.js";
+import bcrypt from "bcrypt";
 
 export async function getAllUsers(): Promise<User[]> {
   return userDB.getAllUsers(db);
 }
-export async function createUser(user: Omit<User, 'id'>): Promise<number> {
+export async function createUser(user: Omit<User, "id">): Promise<number> {
   // Additional business logic (e.g., password complexity checks) can go here
   return userDB.createUser(db, user);
 }
@@ -30,8 +31,7 @@ export async function authenticateUser(
 ): Promise<{ accessToken: string; refreshToken: string } | null> {
   const user = await userDB.getUserByUsername(db, username);
 
-  if (!user || user.passwordHash !== password) {
-    //PLEASE HASH PASSWORDS
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     return null;
   }
 
@@ -46,7 +46,7 @@ export async function authenticateUser(
   // Generate refresh token (long-lived)
   const refreshPayload = {
     sub: user.id,
-    type: 'refresh',
+    type: "refresh",
     exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
   };
 
@@ -66,7 +66,7 @@ export async function refreshAccessToken(
   try {
     // Verify refresh token
     const payload = await verify(refreshToken, config.JWT_SECRET);
-    if (payload.type !== 'refresh') {
+    if (payload.type !== "refresh") {
       return null;
     }
 
@@ -100,18 +100,23 @@ export async function refreshAccessToken(
     const accessToken = await sign(accessPayload, config.JWT_SECRET);
     return { accessToken };
   } catch (error) {
-    console.error('Error refreshing token:', error);
+    console.error("Error refreshing token:", error);
     return null;
   }
 }
 
 export async function signupUser(user: SignupUser): Promise<number> {
   const usersCount = (await getAllUsers()).length;
-  const role = usersCount === 0 ? 'admin' : 'user';
+  const role = usersCount === 0 ? "admin" : "user";
+
+  // Hash the password
+  const saltRounds = 10;
+  const passwordHash = await bcrypt.hash(user.password, saltRounds);
+
   return createUser({
     ...user,
     role,
-    passwordHash: user.password,
+    passwordHash,
     createdAt: new Date().getTime(),
     updatedAt: null,
   });

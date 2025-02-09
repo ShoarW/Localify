@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PlaylistDetails, Track, api, Playlist } from "../services/api";
 import { ContentView } from "../components/localify/content-view";
-import { Trash2 } from "lucide-react";
 import { getGradientByIndex } from "../lib/utils";
+import { useTheme } from "../contexts/theme-context";
 
 interface PlaylistPageProps {
   currentTrackId: number | null;
@@ -20,6 +20,7 @@ export const PlaylistPage = ({
   playlists,
   onPlaylistsChange,
 }: PlaylistPageProps) => {
+  const { gradientFrom } = useTheme();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [playlist, setPlaylist] = useState<PlaylistDetails | null>(null);
@@ -79,15 +80,20 @@ export const PlaylistPage = ({
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      <div className="flex-1 h-full flex items-center justify-center">
+        <div
+          className={`w-8 h-8 border-2 border-t-${gradientFrom.replace(
+            "from-",
+            ""
+          )} rounded-full animate-spin`}
+        />
       </div>
     );
   }
 
   if (!playlist) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 h-full flex items-center justify-center">
         <p className="text-white/60">Playlist not found</p>
       </div>
     );
@@ -98,11 +104,10 @@ export const PlaylistPage = ({
   );
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 h-full flex flex-col">
       <ContentView
         title={playlist.name}
         subtitle="Playlist"
-        coverImage="https://iili.io/HlHy9Yx.png"
         artist={playlist.ownerName}
         tracks={playlist.tracks}
         currentTrackIndex={currentTrackIndex}
@@ -111,6 +116,9 @@ export const PlaylistPage = ({
         gradient={getGradientByIndex(playlist.id)}
         playlists={playlists}
         onPlaylistsChange={onPlaylistsChange}
+        createdAt={playlist.createdAt}
+        onDelete={handleDelete}
+        isDeleting={isDeleting}
       />
 
       {error && (
@@ -118,23 +126,6 @@ export const PlaylistPage = ({
           {error}
         </div>
       )}
-
-      {/* Playlist Actions */}
-      <div className="sticky bottom-0 p-4 border-t border-white/10 backdrop-blur-xl bg-black/30">
-        <div className="flex items-center justify-between">
-          <p className="text-white/60 text-sm">
-            Created {new Date(playlist.createdAt).toLocaleDateString()}
-          </p>
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 className="w-5 h-5" />
-            <span>Delete Playlist</span>
-          </button>
-        </div>
-      </div>
     </div>
   );
 };

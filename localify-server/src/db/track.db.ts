@@ -1,5 +1,5 @@
-import type { Database } from 'better-sqlite3';
-import type { Album, Track, Playlist } from '../types/model.js';
+import type { Database } from "better-sqlite3";
+import type { Album, Track, Playlist } from "../types/model.js";
 
 export function createTracksTable(db: Database) {
   // Create artists table first
@@ -156,12 +156,12 @@ export function getAlbumById(
 ):
   | (Album & {
       artist: string | null;
-      type: 'single' | 'ep' | 'album';
+      type: "single" | "ep" | "album";
       hasImage: boolean;
       artists: {
         id: number;
         name: string;
-        role: 'primary' | 'featured';
+        role: "primary" | "featured";
         position: number;
       }[];
     })
@@ -200,7 +200,7 @@ export function getAlbumById(
     .get(id) as
     | (Album & {
         artist: string | null;
-        type: 'single' | 'ep' | 'album';
+        type: "single" | "ep" | "album";
         hasImage: boolean;
         artists: string;
       })
@@ -211,17 +211,17 @@ export function getAlbumById(
   // Parse the artists string into an array of objects
   const artists = result.artists
     ? result.artists
-      .split(',')
-      .map((artist) => {
-        const [id, name, role, position] = artist.split(':');
-        return {
-          id: parseInt(id),
-          name,
-          role: role as 'primary' | 'featured',
-          position: parseInt(position),
-        };
-      })
-      .sort((a, b) => a.position - b.position)
+        .split(",")
+        .map((artist) => {
+          const [id, name, role, position] = artist.split(":");
+          return {
+            id: parseInt(id),
+            name,
+            role: role as "primary" | "featured",
+            position: parseInt(position),
+          };
+        })
+        .sort((a, b) => a.position - b.position)
     : [];
 
   return {
@@ -237,7 +237,7 @@ export function getAllAlbums(
 ): {
   items: (Album & {
     artist: string | null;
-    type: 'single' | 'ep' | 'album';
+    type: "single" | "ep" | "album";
     hasImage: boolean;
   })[];
   total: number;
@@ -283,7 +283,7 @@ export function getAllAlbums(
     )
     .all(limit, offset) as (Album & {
     artist: string | null;
-    type: 'single' | 'ep' | 'album';
+    type: "single" | "ep" | "album";
     hasImage: boolean;
   })[];
 
@@ -293,7 +293,7 @@ export function getAllAlbums(
   };
 }
 
-export function addAlbum(db: Database, album: Omit<Album, 'id'>): number {
+export function addAlbum(db: Database, album: Omit<Album, "id">): number {
   const insertQuery = db.prepare(`
     INSERT INTO albums (title, artistId, year, coverPath, createdAt, updatedAt)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -313,19 +313,19 @@ export function findAlbumByTitle(
   db: Database,
   title: string
 ): Album | undefined {
-  const query = db.prepare('SELECT * FROM albums WHERE title = ?');
+  const query = db.prepare("SELECT * FROM albums WHERE title = ?");
   return query.get(title) as Album | undefined;
 }
 
 export function getTracksByAlbumId(db: Database, albumId: number): Track[] {
   return db
-    .prepare('SELECT * FROM tracks WHERE albumId = ?')
+    .prepare("SELECT * FROM tracks WHERE albumId = ?")
     .all(albumId) as Track[];
 }
 
 // Update existing track functions
 export function getAllTracks(db: Database): Track[] {
-  return db.prepare('SELECT * FROM tracks').all() as Track[];
+  return db.prepare("SELECT * FROM tracks").all() as Track[];
 }
 
 export function getTrackById(db: Database, id: number): Track | undefined {
@@ -348,17 +348,17 @@ export function getTrackById(db: Database, id: number): Track | undefined {
   // Parse the artists string into an array of objects
   const artists = track.artists
     ? track.artists
-      .split(',')
-      .map((artist) => {
-        const [id, name, role, position] = artist.split(':');
-        return {
-          id: parseInt(id),
-          name,
-          role: role as 'primary' | 'featured',
-          position: parseInt(position),
-        };
-      })
-      .sort((a, b) => a.position - b.position)
+        .split(",")
+        .map((artist) => {
+          const [id, name, role, position] = artist.split(":");
+          return {
+            id: parseInt(id),
+            name,
+            role: role as "primary" | "featured",
+            position: parseInt(position),
+          };
+        })
+        .sort((a, b) => a.position - b.position)
     : [];
 
   return {
@@ -371,11 +371,11 @@ export function getTrackByPath(
   db: Database,
   filePath: string
 ): Track | undefined {
-  const query = db.prepare('SELECT * FROM tracks WHERE path = ?');
+  const query = db.prepare("SELECT * FROM tracks WHERE path = ?");
   return query.get(filePath) as Track | undefined;
 }
 
-export function addTrack(db: Database, track: Omit<Track, 'id'>): void {
+export function addTrack(db: Database, track: Omit<Track, "id">): void {
   const insertQuery = db.prepare(`
     INSERT INTO tracks (path, filename, title, artistId, albumId, genre, duration, mimeType, createdAt, updatedAt)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -395,7 +395,7 @@ export function addTrack(db: Database, track: Omit<Track, 'id'>): void {
 }
 
 export function deleteTrack(db: Database, id: number): boolean {
-  const deleteQuery = db.prepare('DELETE FROM tracks WHERE id = ?');
+  const deleteQuery = db.prepare("DELETE FROM tracks WHERE id = ?");
   const result = deleteQuery.run(id);
   return result.changes > 0;
 }
@@ -426,7 +426,7 @@ export function findAlbumByTitleAndDisc(
   discNumber: number | null
 ): Album | undefined {
   const query = db.prepare(
-    'SELECT * FROM albums WHERE title = ? AND (discNumber = ? OR (discNumber IS NULL AND ? IS NULL))'
+    "SELECT * FROM albums WHERE title = ? AND (discNumber = ? OR (discNumber IS NULL AND ? IS NULL))"
   );
   return query.get(title, discNumber, discNumber) as Album | undefined;
 }
@@ -436,10 +436,10 @@ export function setReaction(
   db: Database,
   userId: number,
   trackId: number,
-  type: 'like' | 'dislike' | null
-): { reaction: 'like' | 'dislike' | null } {
+  type: "like" | "dislike" | null
+): { reaction: "like" | "dislike" | null } {
   // First, remove any existing reaction
-  db.prepare('DELETE FROM reactions WHERE userId = ? AND trackId = ?').run(
+  db.prepare("DELETE FROM reactions WHERE userId = ? AND trackId = ?").run(
     userId,
     trackId
   );
@@ -447,7 +447,7 @@ export function setReaction(
   if (type) {
     // Add new reaction if type is provided
     db.prepare(
-      'INSERT INTO reactions (userId, trackId, type) VALUES (?, ?, ?)'
+      "INSERT INTO reactions (userId, trackId, type) VALUES (?, ?, ?)"
     ).run(userId, trackId, type);
   }
 
@@ -458,10 +458,10 @@ export function getReaction(
   db: Database,
   userId: number,
   trackId: number
-): { reaction: 'like' | 'dislike' | null } {
+): { reaction: "like" | "dislike" | null } {
   const reaction = db
-    .prepare('SELECT type FROM reactions WHERE userId = ? AND trackId = ?')
-    .get(userId, trackId) as { type: 'like' | 'dislike' } | undefined;
+    .prepare("SELECT type FROM reactions WHERE userId = ? AND trackId = ?")
+    .get(userId, trackId) as { type: "like" | "dislike" } | undefined;
 
   return { reaction: reaction?.type || null };
 }
@@ -469,12 +469,12 @@ export function getReaction(
 export function getReactedTracks(
   db: Database,
   userId: number,
-  type: 'like' | 'dislike',
+  type: "like" | "dislike",
   limit: number = 100,
   offset: number = 0
 ): {
   tracks: (Track & {
-    reaction: 'like' | 'dislike' | null;
+    reaction: "like" | "dislike" | null;
     reactionDate: number;
   })[];
   total: number;
@@ -491,7 +491,7 @@ export function getReactedTracks(
     `
     )
     .all(userId, type, limit, offset) as (Track & {
-    reaction: 'like' | 'dislike' | null;
+    reaction: "like" | "dislike" | null;
     reactionDate: number;
   })[];
 
@@ -514,7 +514,7 @@ export function getReactedTracks(
 export function getAllTracksWithReactions(
   db: Database,
   userId: number | null
-): (Track & { reaction: 'like' | 'dislike' | null })[] {
+): (Track & { reaction: "like" | "dislike" | null })[] {
   if (!userId) {
     return db
       .prepare(
@@ -532,7 +532,7 @@ export function getAllTracksWithReactions(
         ORDER BY t.id ASC
       `
       )
-      .all() as (Track & { reaction: 'like' | 'dislike' | null })[];
+      .all() as (Track & { reaction: "like" | "dislike" | null })[];
   }
 
   return db
@@ -552,14 +552,14 @@ export function getAllTracksWithReactions(
       ORDER BY t.id ASC
     `
     )
-    .all(userId) as (Track & { reaction: 'like' | 'dislike' | null })[];
+    .all(userId) as (Track & { reaction: "like" | "dislike" | null })[];
 }
 
 export function getTrackByIdWithReaction(
   db: Database,
   id: number,
   userId: number | null
-): (Track & { reaction: 'like' | 'dislike' | null }) | undefined {
+): (Track & { reaction: "like" | "dislike" | null }) | undefined {
   if (!userId) {
     return db
       .prepare(
@@ -577,7 +577,7 @@ export function getTrackByIdWithReaction(
         WHERE t.id = ?
       `
       )
-      .get(id) as (Track & { reaction: 'like' | 'dislike' | null }) | undefined;
+      .get(id) as (Track & { reaction: "like" | "dislike" | null }) | undefined;
   }
 
   return db
@@ -598,7 +598,7 @@ export function getTrackByIdWithReaction(
     `
     )
     .get(userId, id) as
-    | (Track & { reaction: 'like' | 'dislike' | null })
+    | (Track & { reaction: "like" | "dislike" | null })
     | undefined;
 }
 
@@ -606,7 +606,7 @@ export function searchTracksWithReactions(
   db: Database,
   query: string,
   userId: number | null
-): (Track & { reaction: 'like' | 'dislike' | null })[] {
+): (Track & { reaction: "like" | "dislike" | null })[] {
   if (!userId) {
     const tracks = searchTracks(db, query);
     return tracks.map((track) => ({ ...track, reaction: null }));
@@ -643,7 +643,7 @@ export function searchTracksWithReactions(
       searchTerm,
       searchTerm
     ) as (Track & {
-    reaction: 'like' | 'dislike' | null;
+    reaction: "like" | "dislike" | null;
   })[];
 }
 
@@ -652,8 +652,9 @@ export function getTracksByAlbumIdWithReactions(
   albumId: number,
   userId: number | null
 ): (Track & {
-  reaction: 'like' | 'dislike' | null;
+  reaction: "like" | "dislike" | null;
   artistName: string | null;
+  albumName: string | null;
 })[] {
   if (!userId) {
     return db
@@ -667,16 +668,19 @@ export function getTracksByAlbumIdWithReactions(
           t.albumId,
           t.artistId,
           NULL as reaction,
-          ar.name as artistName
+          ar.name as artistName,
+          al.title as album
         FROM tracks t
         LEFT JOIN artists ar ON t.artistId = ar.id
+        LEFT JOIN albums al ON t.albumId = al.id
         WHERE t.albumId = ?
         ORDER BY t.id ASC
       `
       )
       .all(albumId) as (Track & {
-      reaction: 'like' | 'dislike' | null;
+      reaction: "like" | "dislike" | null;
       artistName: string | null;
+      albumName: string | null;
     })[];
   }
 
@@ -691,17 +695,20 @@ export function getTracksByAlbumIdWithReactions(
         t.albumId,
         t.artistId,
         r.type as reaction,
-        ar.name as artistName
+        ar.name as artistName,
+        al.title as album
       FROM tracks t
       LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
       LEFT JOIN artists ar ON t.artistId = ar.id
+      LEFT JOIN albums al ON t.albumId = al.id
       WHERE t.albumId = ?
       ORDER BY t.id ASC
     `
     )
     .all(userId, albumId) as (Track & {
-    reaction: 'like' | 'dislike' | null;
+    reaction: "like" | "dislike" | null;
     artistName: string | null;
+    albumName: string | null;
   })[];
 }
 
@@ -710,8 +717,8 @@ export function getAllAlbumsWithTracks(
   userId: number | null
 ): (Album & {
   artist: string | null;
-  type: 'single' | 'ep' | 'album';
-  tracks: (Track & { reaction: 'like' | 'dislike' | null })[];
+  type: "single" | "ep" | "album";
+  tracks: (Track & { reaction: "like" | "dislike" | null })[];
 })[] {
   const albums = getAllAlbums(db);
 
@@ -730,8 +737,8 @@ export function getAlbumWithTracks(
   userId: number | null
 ):
   | {
-      album: Album & { artist: string | null; type: 'single' | 'ep' | 'album' };
-      tracks: (Track & { reaction: 'like' | 'dislike' | null })[];
+      album: Album & { artist: string | null; type: "single" | "ep" | "album" };
+      tracks: (Track & { reaction: "like" | "dislike" | null })[];
     }
   | undefined {
   const album = getAlbumById(db, id);
@@ -792,7 +799,13 @@ export function getPlaylistById(
   playlistId: number,
   userId: number | null
 ):
-  | (Playlist & { tracks: (Track & { reaction: 'like' | 'dislike' | null })[] })
+  | (Playlist & {
+      tracks: (Track & {
+        reaction: "like" | "dislike" | null;
+        artistName: string | null;
+        albumName: string | null;
+      })[];
+    })
   | undefined {
   const playlist = db
     .prepare(
@@ -807,21 +820,50 @@ export function getPlaylistById(
 
   if (!playlist) return undefined;
 
-  const tracks = db
-    .prepare(
-      `
-      SELECT t.*, pt.position, r.type as reaction
+  const tracksQuery = userId
+    ? `
+      SELECT 
+        t.id,
+        t.title,
+        t.duration,
+        t.genre,
+        t.albumId,
+        t.artistId,
+        pt.position,
+        r.type as reaction,
+        ar.name as artistName,
+        al.title as album
       FROM tracks t
       JOIN playlist_tracks pt ON pt.trackId = t.id
       LEFT JOIN reactions r ON r.trackId = t.id AND r.userId = ?
+      LEFT JOIN artists ar ON t.artistId = ar.id
+      LEFT JOIN albums al ON t.albumId = al.id
       WHERE pt.playlistId = ?
       ORDER BY pt.position ASC
     `
-    )
-    .all(userId, playlistId) as (Track & {
-    position: number;
-    reaction: 'like' | 'dislike' | null;
-  })[];
+    : `
+      SELECT 
+        t.id,
+        t.title,
+        t.duration,
+        t.genre,
+        t.albumId,
+        t.artistId,
+        pt.position,
+        NULL as reaction,
+        ar.name as artistName,
+        al.title as albumName
+      FROM tracks t
+      JOIN playlist_tracks pt ON pt.trackId = t.id
+      LEFT JOIN artists ar ON t.artistId = ar.id
+      LEFT JOIN albums al ON t.albumId = al.id
+      WHERE pt.playlistId = ?
+      ORDER BY pt.position ASC
+    `;
+
+  const tracks = userId
+    ? db.prepare(tracksQuery).all(userId, playlistId)
+    : db.prepare(tracksQuery).all(playlistId);
 
   return {
     ...playlist,
@@ -886,7 +928,7 @@ export function isPlaylistOwner(
   userId: number
 ): boolean {
   const playlist = db
-    .prepare('SELECT userId FROM playlists WHERE id = ?')
+    .prepare("SELECT userId FROM playlists WHERE id = ?")
     .get(playlistId) as { userId: number } | undefined;
   return playlist?.userId === userId;
 }
@@ -909,7 +951,7 @@ export function advancedSearch(
     hasImage: boolean;
   })[];
   tracks: (Track & {
-    reaction: 'like' | 'dislike' | null;
+    reaction: "like" | "dislike" | null;
     artistName: string | null;
   })[];
 } {
@@ -968,8 +1010,8 @@ export function advancedSearch(
   // Search for tracks with reactions and artist names
   const tracks = userId
     ? db
-      .prepare(
-        `
+        .prepare(
+          `
           SELECT 
             t.id,
             t.title,
@@ -992,11 +1034,11 @@ export function advancedSearch(
             t.title ASC
           LIMIT ?
         `
-      )
-      .all(userId, searchTerm, searchTerm, searchTerm, searchTerm, limit)
+        )
+        .all(userId, searchTerm, searchTerm, searchTerm, searchTerm, limit)
     : db
-      .prepare(
-        `
+        .prepare(
+          `
           SELECT 
             t.id,
             t.title,
@@ -1018,14 +1060,14 @@ export function advancedSearch(
             t.title ASC
           LIMIT ?
         `
-      )
-      .all(searchTerm, searchTerm, searchTerm, searchTerm, limit);
+        )
+        .all(searchTerm, searchTerm, searchTerm, searchTerm, limit);
 
   return {
     artists,
     albums,
     tracks: tracks as (Track & {
-      reaction: 'like' | 'dislike' | null;
+      reaction: "like" | "dislike" | null;
       artistName: string | null;
     })[],
   };
@@ -1045,13 +1087,13 @@ export function getArtistById(
         hasImage: boolean;
         hasBackgroundImage: boolean;
       };
-      randomTracks: (Track & { reaction: 'like' | 'dislike' | null })[];
+      randomTracks: (Track & { reaction: "like" | "dislike" | null })[];
       albums: (Album & {
         trackCount: number;
-        type: 'single' | 'ep' | 'album';
+        type: "single" | "ep" | "album";
         hasImage: boolean;
       })[];
-      singles: (Track & { reaction: 'like' | 'dislike' | null })[];
+      singles: (Track & { reaction: "like" | "dislike" | null })[];
     }
   | undefined {
   const artist = db
@@ -1098,7 +1140,7 @@ export function getArtistById(
     `
     )
     .all(userId, artistId) as (Track & {
-    reaction: 'like' | 'dislike' | null;
+    reaction: "like" | "dislike" | null;
     artistName: string | null;
   })[];
 
@@ -1122,7 +1164,7 @@ export function getArtistById(
     `
     )
     .all(userId, artistId) as (Track & {
-    reaction: 'like' | 'dislike' | null;
+    reaction: "like" | "dislike" | null;
     artistName: string | null;
   })[];
 
@@ -1209,11 +1251,11 @@ export function createOrUpdateArtist(
   if (artist.id) {
     // For updates, first check if the new name conflicts with any other artist
     const existingArtist = db
-      .prepare('SELECT id FROM artists WHERE name = ? AND id != ?')
+      .prepare("SELECT id FROM artists WHERE name = ? AND id != ?")
       .get(artist.name, artist.id) as { id: number } | undefined;
 
     if (existingArtist) {
-      throw new Error('An artist with this name already exists');
+      throw new Error("An artist with this name already exists");
     }
 
     // Update existing artist
@@ -1233,11 +1275,11 @@ export function createOrUpdateArtist(
   } else {
     // For new artists, check if name already exists
     const existingArtist = db
-      .prepare('SELECT id FROM artists WHERE name = ?')
+      .prepare("SELECT id FROM artists WHERE name = ?")
       .get(artist.name) as { id: number } | undefined;
 
     if (existingArtist) {
-      throw new Error('An artist with this name already exists');
+      throw new Error("An artist with this name already exists");
     }
 
     // Create new artist
@@ -1261,7 +1303,7 @@ export function getShuffledArtistTracks(
   userId: number | null,
   limit: number = 50
 ): (Track & {
-  reaction: 'like' | 'dislike' | null;
+  reaction: "like" | "dislike" | null;
   artistName: string | null;
 })[] {
   if (!userId) {
@@ -1285,7 +1327,7 @@ export function getShuffledArtistTracks(
       `
       )
       .all(artistId, limit) as (Track & {
-      reaction: 'like' | 'dislike' | null;
+      reaction: "like" | "dislike" | null;
       artistName: string | null;
     })[];
   }
@@ -1311,7 +1353,7 @@ export function getShuffledArtistTracks(
     `
     )
     .all(userId, artistId, limit) as (Track & {
-    reaction: 'like' | 'dislike' | null;
+    reaction: "like" | "dislike" | null;
     artistName: string | null;
   })[];
 }
@@ -1322,7 +1364,7 @@ export function getArtistAlbums(
   artistId: number
 ): (Album & {
   trackCount: number;
-  type: 'single' | 'ep' | 'album';
+  type: "single" | "ep" | "album";
   hasImage: boolean;
 })[] {
   return db
@@ -1352,7 +1394,7 @@ export function getArtistAlbums(
     )
     .all(artistId) as (Album & {
     trackCount: number;
-    type: 'single' | 'ep' | 'album';
+    type: "single" | "ep" | "album";
     hasImage: boolean;
   })[];
 }
@@ -1380,7 +1422,7 @@ export function getPlayCount(
 ): { count: number; lastPlayed: number } | undefined {
   return db
     .prepare(
-      'SELECT count, lastPlayed FROM play_counts WHERE userId = ? AND trackId = ?'
+      "SELECT count, lastPlayed FROM play_counts WHERE userId = ? AND trackId = ?"
     )
     .get(userId, trackId) as { count: number; lastPlayed: number } | undefined;
 }
@@ -1415,7 +1457,7 @@ export function getNewReleases(
   limit: number = 10
 ): (Album & {
   artist: string | null;
-  type: 'single' | 'ep' | 'album';
+  type: "single" | "ep" | "album";
   hasImage: boolean;
 })[] {
   return db
@@ -1448,7 +1490,7 @@ export function getNewReleases(
     )
     .all(limit) as (Album & {
     artist: string | null;
-    type: 'single' | 'ep' | 'album';
+    type: "single" | "ep" | "album";
     hasImage: boolean;
   })[];
 }
@@ -1458,7 +1500,7 @@ export function getQuickPicks(
   userId: number | null,
   limit: number = 10
 ): (Track & {
-  reaction: 'like' | 'dislike' | null;
+  reaction: "like" | "dislike" | null;
   artistName: string | null;
 })[] {
   // For now, return random tracks, but this could be improved with actual recommendations
@@ -1477,7 +1519,7 @@ export function getQuickPicks(
       `
       )
       .all(limit) as (Track & {
-      reaction: 'like' | 'dislike' | null;
+      reaction: "like" | "dislike" | null;
       artistName: string | null;
     })[];
   }
@@ -1497,7 +1539,7 @@ export function getQuickPicks(
     `
     )
     .all(userId, limit) as (Track & {
-    reaction: 'like' | 'dislike' | null;
+    reaction: "like" | "dislike" | null;
     artistName: string | null;
   })[];
 }
@@ -1530,10 +1572,10 @@ export function getListenAgain(
 
 export function migrateDatabase(db: Database) {
   // Add backgroundImagePath to artists table if it doesn't exist
-  const tableInfo = db.prepare('PRAGMA table_info(artists)').all() as {
+  const tableInfo = db.prepare("PRAGMA table_info(artists)").all() as {
     name: string;
   }[];
-  if (!tableInfo.some((col) => col.name === 'backgroundImagePath')) {
+  if (!tableInfo.some((col) => col.name === "backgroundImagePath")) {
     db.prepare(
       `
       ALTER TABLE artists

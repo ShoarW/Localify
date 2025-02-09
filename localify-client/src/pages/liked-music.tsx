@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, Track, Playlist } from "../services/api";
 import { ContentView } from "../components/localify/content-view";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTheme } from "../contexts/theme-context";
 
 interface LikedMusicProps {
   currentTrackId: number | null;
@@ -18,6 +19,7 @@ export const LikedMusicPage = ({
   playlists,
   onPlaylistsChange,
 }: LikedMusicProps) => {
+  const { gradientFrom } = useTheme();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,15 +56,20 @@ export const LikedMusicPage = ({
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      <div className="flex-1 h-full flex items-center justify-center">
+        <div
+          className={`w-8 h-8 border-2 border-white/20 border-t-${gradientFrom.replace(
+            "from-",
+            ""
+          )} rounded-full animate-spin`}
+        />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 h-full flex items-center justify-center">
         <p className="text-white/60">{error}</p>
       </div>
     );
@@ -73,11 +80,10 @@ export const LikedMusicPage = ({
   );
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 h-full flex flex-col">
       <ContentView
         title="Liked Songs"
         subtitle="Playlist"
-        coverImage="https://iili.io/HlHy9Yx.png"
         artist="Your Library"
         tracks={tracks}
         currentTrackIndex={currentTrackIndex}
@@ -88,7 +94,7 @@ export const LikedMusicPage = ({
       />
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 p-4 border-t border-white/10">
+        <div className="sticky bottom-0 flex items-center justify-center gap-4 p-4 border-t border-white/10 bg-black/30 backdrop-blur-xl">
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}

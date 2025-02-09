@@ -1,6 +1,7 @@
-import { User, Music } from "lucide-react";
+import { User, Music, Play } from "lucide-react";
 import { api } from "../../services/api";
 import { useEffect, useState } from "react";
+import { useTheme } from "../../contexts/theme-context";
 
 type ImageType = "artist" | "album";
 type ImageSize = "sm" | "md" | "lg" | "xl";
@@ -12,6 +13,9 @@ interface PlaceholderImageProps {
   rounded?: "none" | "md" | "lg" | "full";
   className?: string;
   hasImage?: boolean;
+  showPlayButton?: boolean;
+  onPlayClick?: () => void;
+  gradient?: string;
 }
 
 const sizeMap = {
@@ -35,6 +39,20 @@ const iconSizeMap = {
   xl: "w-12 h-12",
 };
 
+const playButtonSizeMap = {
+  sm: "w-8 h-8",
+  md: "w-10 h-10",
+  lg: "w-12 h-12",
+  xl: "w-16 h-16",
+};
+
+const playIconSizeMap = {
+  sm: "w-4 h-4",
+  md: "w-5 h-5",
+  lg: "w-6 h-6",
+  xl: "w-8 h-8",
+};
+
 export const PlaceholderImage = ({
   type,
   id,
@@ -42,9 +60,14 @@ export const PlaceholderImage = ({
   rounded = "md",
   className = "",
   hasImage = false,
+  showPlayButton = false,
+  onPlayClick,
+  gradient,
 }: PlaceholderImageProps) => {
   const [imageError, setImageError] = useState(false);
   const [imageKey, setImageKey] = useState(Date.now());
+  const { gradientFrom, gradientTo } = useTheme();
+  const finalGradient = gradient || `${gradientFrom} ${gradientTo}`;
 
   // Reset error state when id changes
   useEffect(() => {
@@ -60,6 +83,8 @@ export const PlaceholderImage = ({
     overflow-hidden
     aspect-square
     shrink-0
+    relative
+    group
     ${className}
   `.trim();
 
@@ -72,6 +97,16 @@ export const PlaceholderImage = ({
           <User className={iconClasses} />
         ) : (
           <Music className={iconClasses} />
+        )}
+        {showPlayButton && (
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl flex items-center justify-center">
+            <button
+              className={`${playButtonSizeMap[size]} rounded-full bg-gradient-to-r ${finalGradient} flex items-center justify-center transform translate-y-4 group-hover:translate-y-0 transition-all duration-300`}
+              onClick={onPlayClick}
+            >
+              <Play className={playIconSizeMap[size]} fill="white" />
+            </button>
+          </div>
         )}
       </div>
     );
@@ -90,6 +125,16 @@ export const PlaceholderImage = ({
         className="w-full h-full object-cover"
         onError={() => setImageError(true)}
       />
+      {showPlayButton && (
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl flex items-center justify-center">
+          <button
+            className={`${playButtonSizeMap[size]} rounded-full bg-gradient-to-r ${finalGradient} flex items-center justify-center transform translate-y-4 group-hover:translate-y-0 transition-all duration-300`}
+            onClick={onPlayClick}
+          >
+            <Play className={playIconSizeMap[size]} fill="white" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",
+    "bcrypt": "^5.1.1",
     "better-sqlite3": "^11.8.1",
     "dotenv": "^16.4.7",
     "hono": "^4.6.20",
@@ -16,6 +17,7 @@
     "sharp": "^0.33.5"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/better-sqlite3": "^7.6.12",
     "@types/mime-types": "^2.1.4",
     "@types/node": "^20.11.17",
