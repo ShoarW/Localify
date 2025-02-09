@@ -803,7 +803,7 @@ export function getPlaylistById(
       tracks: (Track & {
         reaction: "like" | "dislike" | null;
         artistName: string | null;
-        albumName: string | null;
+        album: string | null;
       })[];
     })
   | undefined {
@@ -863,7 +863,7 @@ export function getPlaylistById(
 
   const tracks = userId
     ? db.prepare(tracksQuery).all(userId, playlistId)
-    : db.prepare(tracksQuery).all(playlistId);
+    : (db.prepare(tracksQuery).all(playlistId) as any);
 
   return {
     ...playlist,
