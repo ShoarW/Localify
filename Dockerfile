@@ -26,7 +26,7 @@ COPY --from=server-builder /app/server/node_modules ./node_modules
 COPY --from=client-builder /app/client/dist ./static
 
 # Create directories for data and storage
-RUN mkdir -p /app/data/storage /app/data/media && chown -R node:node /app/data
+RUN mkdir -p /storage /media && chown -R node:node /storage /media
 
 # Switch to non-root user
 USER node
