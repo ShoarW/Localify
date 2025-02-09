@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
-import { HomeContent, api } from "../../services/api";
-import { formatDistanceToNow } from "date-fns";
+import { HomeContent, Playlist, Track, api } from "../../services/api";
 import { AlbumCard } from "./album-card";
 import { TrackItem } from "./track-item";
 
 interface MainContentProps {
-  onPlayTrack: (tracks: any[], startIndex: number) => void;
-  playlists: any[];
-  onPlaylistsChange: (playlists: any[]) => void;
+  onPlayTrack: (tracks: Track[], startIndex: number) => void;
+  playlists: Playlist[];
+  onPlaylistsChange: (playlists: Playlist[]) => void;
   currentTrackId: number | null;
   isPlaying: boolean;
 }
@@ -143,11 +142,6 @@ export const MainContent = ({
                   isActive={currentTrackId === track.id}
                   isPlaying={isPlaying && currentTrackId === track.id}
                 />
-                <div className="absolute right-24 top-1/2 -translate-y-1/2 hidden sm:block">
-                  <span className="text-xs text-white/40">
-                    {formatDistanceToNow(track.lastPlayed)} ago
-                  </span>
-                </div>
               </div>
             ))}
           </div>

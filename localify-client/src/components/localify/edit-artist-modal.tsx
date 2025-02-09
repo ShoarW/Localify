@@ -49,7 +49,7 @@ export const EditArtistModal = ({
   const [showCropper, setShowCropper] = useState(false);
   const [showBackgroundCropper, setShowBackgroundCropper] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const backgroundFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -181,6 +181,7 @@ export const EditArtistModal = ({
       onClose();
     } catch (error) {
       setError("Failed to update artist");
+      console.error(error);
     } finally {
       setIsLoading(false);
     }

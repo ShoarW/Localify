@@ -1,14 +1,14 @@
 // src/api/middlewares/permission.ts
-import { createMiddleware } from "hono/factory";
-import { hasPermission } from "../services/permission.service.js";
+import { createMiddleware } from 'hono/factory';
+import { hasPermission } from '../services/permission.service.js';
 
 export const permissionMiddleware = (action: string) => {
   return createMiddleware(async (c, next) => {
-    const user = c.get("user") as { sub: number; role: string } & {
+    const user = c.get('user') as { sub: number; role: string } & {
       [key: string]: any;
     };
     if (!user) {
-      return c.json({ error: "Unauthorized: User not found in context." }, 401);
+      return c.json({ error: 'Unauthorized: User not found in context.' }, 401);
     }
 
     const allowed = await hasPermission(user.role, action);
@@ -16,7 +16,7 @@ export const permissionMiddleware = (action: string) => {
       return c.json(
         {
           error:
-            "Forbidden: You do not have permission to perform this action.",
+            'Forbidden: You do not have permission to perform this action.',
         },
         403
       );

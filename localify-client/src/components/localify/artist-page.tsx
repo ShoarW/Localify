@@ -1,16 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ArtistDetails, Track, api, Playlist } from "../../services/api";
-import {
-  User,
-  Play,
-  Edit,
-  ChevronDown,
-  ChevronUp,
-  Shuffle,
-} from "lucide-react";
+import { Edit, ChevronDown, ChevronUp, Shuffle } from "lucide-react";
 import { TrackItem } from "./track-item";
-import { Link } from "react-router-dom";
 import { AlbumCard } from "./album-card";
 import { EditArtistModal } from "./edit-artist-modal";
 import { getUser } from "../../utils/auth";

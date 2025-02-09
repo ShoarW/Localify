@@ -1,4 +1,4 @@
-import type { Database } from "better-sqlite3";
+import type { Database } from 'better-sqlite3';
 
 export function createPermissionsTable(db: Database) {
   db.prepare(
@@ -16,23 +16,23 @@ export function createPermissionsTable(db: Database) {
 
 export function seedPermissions(db: Database) {
   const permissionsCount = db
-    .prepare("SELECT COUNT(*) as count FROM permissions")
+    .prepare('SELECT COUNT(*) as count FROM permissions')
     .get() as { count: number };
   if (permissionsCount.count === 0) {
     db.prepare(
-      "INSERT INTO permissions (role, action) VALUES ('admin', 'index')"
+      'INSERT INTO permissions (role, action) VALUES (\'admin\', \'index\')'
     ).run();
     db.prepare(
-      "INSERT INTO permissions (role, action) VALUES ('admin', 'delete_track')"
+      'INSERT INTO permissions (role, action) VALUES (\'admin\', \'delete_track\')'
     ).run();
     db.prepare(
-      "INSERT INTO permissions (role, action) VALUES ('admin', 'create_user')"
+      'INSERT INTO permissions (role, action) VALUES (\'admin\', \'create_user\')'
     ).run();
     db.prepare(
-      "INSERT INTO permissions (role, action) VALUES ('admin', 'delete_user')"
+      'INSERT INTO permissions (role, action) VALUES (\'admin\', \'delete_user\')'
     ).run();
     db.prepare(
-      "INSERT INTO permissions (role, action) VALUES ('admin', 'modify_artists')"
+      'INSERT INTO permissions (role, action) VALUES (\'admin\', \'modify_artists\')'
     ).run();
     // Add other default permissions as needed
   }

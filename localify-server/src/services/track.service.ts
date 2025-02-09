@@ -1,14 +1,11 @@
 // src/services/track.service.ts
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import * as mm from "music-metadata";
-import { db } from "../db/db.js";
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import * as mm from 'music-metadata';
+import { db } from '../db/db.js';
 import {
-  addTrack as dbAddTrack,
   getAllTracks as dbGetAllTracks,
-  getTrackById as dbGetTrackById,
   deleteTrack as dbDeleteTrack,
-  searchTracks as dbSearchTracks,
   getTrackByPath as dbGetTrackByPath,
   addAlbum as dbAddAlbum,
   getAlbumById as dbGetAlbumById,
@@ -19,10 +16,8 @@ import {
   getReactedTracks as dbGetReactedTracks,
   getReaction as dbGetReaction,
   getAllTracksWithReactions as dbGetAllTracksWithReactions,
-  getTrackByIdWithReaction as dbGetTrackByIdWithReaction,
   searchTracksWithReactions as dbSearchTracksWithReactions,
   getTracksByAlbumIdWithReactions as dbGetTracksByAlbumIdWithReactions,
-  getAllAlbumsWithTracks as dbGetAllAlbumsWithTracks,
   createPlaylist as dbCreatePlaylist,
   addTrackToPlaylist as dbAddTrackToPlaylist,
   removeTrackFromPlaylist as dbRemoveTrackFromPlaylist,
@@ -43,28 +38,28 @@ import {
   getNewReleases as dbGetNewReleases,
   getQuickPicks as dbGetQuickPicks,
   getListenAgain as dbGetListenAgain,
-} from "../db/track.db.js";
-import type { Track, Album, Playlist } from "../types/model.js";
-import mime from "mime-types";
-import type { Database } from "better-sqlite3";
+} from '../db/track.db.js';
+import type { Track, Album, Playlist } from '../types/model.js';
+import mime from 'mime-types';
+import type { Database } from 'better-sqlite3';
 
 // Common cover art filenames to look for
 const COVER_ART_FILENAMES = [
-  "cover.jpg",
-  "cover.jpeg",
-  "cover.png",
-  "folder.jpg",
-  "folder.jpeg",
-  "folder.png",
-  "album.jpg",
-  "album.jpeg",
-  "album.png",
-  "artwork.jpg",
-  "artwork.jpeg",
-  "artwork.png",
-  "front.jpg",
-  "front.jpeg",
-  "front.png",
+  'cover.jpg',
+  'cover.jpeg',
+  'cover.png',
+  'folder.jpg',
+  'folder.jpeg',
+  'folder.png',
+  'album.jpg',
+  'album.jpeg',
+  'album.png',
+  'artwork.jpg',
+  'artwork.jpeg',
+  'artwork.png',
+  'front.jpg',
+  'front.jpeg',
+  'front.png',
 ];
 
 async function findCoverArtInDirectory(
@@ -91,7 +86,7 @@ async function findCoverArtInDirectory(
 
     return null;
   } catch (error) {
-    console.error("Error finding cover art:", error);
+    console.error('Error finding cover art:', error);
     return null;
   }
 }
@@ -99,7 +94,7 @@ async function findCoverArtInDirectory(
 export async function indexDirectory(
   directoryPath: string,
   progressCallback?: (progress: {
-    type: "scanning" | "processing" | "cleanup";
+    type: 'scanning' | 'processing' | 'cleanup';
     total?: number;
     current: number;
     currentFile?: string;
@@ -119,7 +114,7 @@ export async function indexDirectory(
 
   // First, scan all files
   progressCallback?.({
-    type: "scanning",
+    type: 'scanning',
     current: 0,
     added: 0,
     removed: 0,
@@ -148,7 +143,7 @@ export async function indexDirectory(
           added.push(addedTrack);
         }
         progressCallback?.({
-          type: "processing",
+          type: 'processing',
           total: totalFiles,
           current: i + added.length,
           currentFile: filePath,
@@ -177,7 +172,7 @@ export async function indexDirectory(
     const batch = pathsToRemove.slice(i, i + BATCH_SIZE);
 
     progressCallback?.({
-      type: "cleanup",
+      type: 'cleanup',
       total: pathsToRemove.length,
       current: i,
       added: added.length,
@@ -199,7 +194,7 @@ export async function indexDirectory(
 
   // Final progress update
   progressCallback?.({
-    type: "cleanup",
+    type: 'cleanup',
     total: pathsToRemove.length,
     current: pathsToRemove.length,
     added: added.length,
@@ -228,38 +223,38 @@ async function getAllMusicFiles(directoryPath: string): Promise<string[]> {
 
 // Helper function (also part of the service)
 function isMusicFile(filename: string): boolean {
-  const supportedExtensions = [".mp3", ".flac", ".wav", ".ogg", ".m4a", ".aac"];
+  const supportedExtensions = ['.mp3', '.flac', '.wav', '.ogg', '.m4a', '.aac'];
   const ext = path.extname(filename).toLowerCase();
   return supportedExtensions.includes(ext);
 }
 
 function cleanAlbumTitle(albumTitle: string): string {
   // Remove CD/Disc information and trim whitespace
-  return albumTitle.replace(/\s*(?:CD|Disc)\s*\d+/i, "").trim();
+  return albumTitle.replace(/\s*(?:CD|Disc)\s*\d+/i, '').trim();
 }
 
 function separateArtists(input: string): string[] {
   if (!input) return [];
 
   // Remove any text in parentheses (like remix info)
-  input = input.replace(/\([^)]*\)/g, "");
+  input = input.replace(/\([^)]*\)/g, '');
 
   // Define all possible separators
   const separators = [
-    " & ", // Ampersand
-    " x ", // Lowercase x
-    " X ", // Uppercase X
-    ", ", // Comma
-    "/", // Forward slash
-    " \\+ ", // Plus sign
-    " feat\\. ", // feat. abbreviation
-    " featuring ", // Full featuring word
-    " ft\\. ", // ft. abbreviation
-    " with ", // with conjunction
+    ' & ', // Ampersand
+    ' x ', // Lowercase x
+    ' X ', // Uppercase X
+    ', ', // Comma
+    '/', // Forward slash
+    ' \\+ ', // Plus sign
+    ' feat\\. ', // feat. abbreviation
+    ' featuring ', // Full featuring word
+    ' ft\\. ', // ft. abbreviation
+    ' with ', // with conjunction
   ];
 
   // Create regex pattern
-  const pattern = new RegExp(separators.join("|"), "gi");
+  const pattern = new RegExp(separators.join('|'), 'gi');
 
   // Split the string and clean up results
   return input
@@ -271,7 +266,7 @@ function separateArtists(input: string): string[] {
 async function findOrCreateArtists(artistString: string | null): Promise<{
   artistId: number | null;
   artistString: string | null;
-  artists: { id: number; name: string; role: "primary" | "featured" }[];
+  artists: { id: number; name: string; role: 'primary' | 'featured' }[];
 }> {
   if (!artistString) {
     return {
@@ -290,13 +285,13 @@ async function findOrCreateArtists(artistString: string | null): Promise<{
 
     // Try to find existing artist
     let artist = db
-      .prepare("SELECT id, name FROM artists WHERE name = ?")
+      .prepare('SELECT id, name FROM artists WHERE name = ?')
       .get(artistName) as { id: number; name: string } | undefined;
 
     if (!artist) {
       // Create new artist
       const result = db
-        .prepare("INSERT INTO artists (name) VALUES (?)")
+        .prepare('INSERT INTO artists (name) VALUES (?)')
         .run(artistName);
 
       artist = {
@@ -308,7 +303,7 @@ async function findOrCreateArtists(artistString: string | null): Promise<{
     artists.push({
       id: artist.id,
       name: artist.name,
-      role: i === 0 ? ("primary" as const) : ("featured" as const),
+      role: i === 0 ? ('primary' as const) : ('featured' as const),
     });
   }
 
@@ -322,7 +317,7 @@ async function findOrCreateArtists(artistString: string | null): Promise<{
 async function addTrack(filePath: string): Promise<void> {
   try {
     const metadata = await mm.parseFile(filePath);
-    const mimeType = mime.lookup(filePath) || "application/octet-stream";
+    const mimeType = mime.lookup(filePath) || 'application/octet-stream';
 
     // Find or create artists for the track
     const artistInfo = await findOrCreateArtists(
@@ -345,7 +340,7 @@ async function addTrack(filePath: string): Promise<void> {
         if (!existingAlbum.coverPath) {
           const coverPath = await findCoverArtInDirectory(directoryPath);
           if (coverPath) {
-            db.prepare("UPDATE albums SET coverPath = ? WHERE id = ?").run(
+            db.prepare('UPDATE albums SET coverPath = ? WHERE id = ?').run(
               coverPath,
               albumId
             );
@@ -361,7 +356,7 @@ async function addTrack(filePath: string): Promise<void> {
         );
 
         // Create new album
-        const album: Omit<Album, "id"> = {
+        const album: Omit<Album, 'id'> = {
           title: albumTitle,
           artistId: albumArtistInfo.artistId,
           artistString: albumArtistInfo.artistString,
@@ -384,14 +379,14 @@ async function addTrack(filePath: string): Promise<void> {
       }
     }
 
-    const track: Omit<Track, "id"> = {
+    const track: Omit<Track, 'id'> = {
       path: filePath,
       filename: path.basename(filePath),
       title: metadata.common.title || null,
       artistId: artistInfo.artistId,
       artistString: artistInfo.artistString,
       albumId: albumId,
-      genre: metadata.common.genre ? metadata.common.genre.join(", ") : null,
+      genre: metadata.common.genre ? metadata.common.genre.join(', ') : null,
       year: metadata.common.year || null,
       duration: metadata.format.duration || null,
       mimeType: mimeType,
@@ -447,7 +442,7 @@ async function addTrack(filePath: string): Promise<void> {
 
 export async function getAllTracks(
   userId: number | null = null
-): Promise<(Track & { reaction: "like" | "dislike" | null })[]> {
+): Promise<(Track & { reaction: 'like' | 'dislike' | null })[]> {
   return dbGetAllTracksWithReactions(db, userId);
 }
 
@@ -462,7 +457,7 @@ export async function getTrackById(
   userId: number | null = null
 ): Promise<
   | (Track & {
-      reaction: "like" | "dislike" | null;
+      reaction: 'like' | 'dislike' | null;
       albumHasImage: boolean | null;
     })
   | undefined
@@ -476,7 +471,7 @@ export function getTrackByIdWithReaction(
   userId: number | null
 ):
   | (Track & {
-      reaction: "like" | "dislike" | null;
+      reaction: 'like' | 'dislike' | null;
       albumHasImage: boolean | null;
     })
   | undefined {
@@ -501,7 +496,7 @@ export function getTrackByIdWithReaction(
       )
       .get(id) as
       | (Track & {
-          reaction: "like" | "dislike" | null;
+          reaction: 'like' | 'dislike' | null;
           albumHasImage: boolean | null;
         })
       | undefined;
@@ -528,7 +523,7 @@ export function getTrackByIdWithReaction(
     )
     .get(userId, id) as
     | (Track & {
-        reaction: "like" | "dislike" | null;
+        reaction: 'like' | 'dislike' | null;
         albumHasImage: boolean | null;
       })
     | undefined;
@@ -541,7 +536,7 @@ export async function deleteTrack(id: number): Promise<boolean> {
 export async function searchTracks(
   query: string,
   userId: number | null = null
-): Promise<(Track & { reaction: "like" | "dislike" | null })[]> {
+): Promise<(Track & { reaction: 'like' | 'dislike' | null })[]> {
   return dbSearchTracksWithReactions(db, query, userId);
 }
 
@@ -559,8 +554,8 @@ export async function getAllAlbums(
 ): Promise<{
   items: (Album & {
     artist: string | null;
-    type: "single" | "ep" | "album";
-    tracks: (Track & { reaction: "like" | "dislike" | null })[];
+    type: 'single' | 'ep' | 'album';
+    tracks: (Track & { reaction: 'like' | 'dislike' | null })[];
   })[];
   total: number;
   currentPage: number;
@@ -591,7 +586,7 @@ export async function getAlbumWithTracks(
 ): Promise<
   | {
       album: Album & { artist: string | null };
-      tracks: (Track & { reaction: "like" | "dislike" | null })[];
+      tracks: (Track & { reaction: 'like' | 'dislike' | null })[];
     }
   | undefined
 > {
@@ -606,21 +601,21 @@ export async function getTracksByAlbumId(albumId: number): Promise<Track[]> {
 export async function setReaction(
   userId: number,
   trackId: number,
-  type: "like" | "dislike" | null
-): Promise<{ reaction: "like" | "dislike" | null }> {
+  type: 'like' | 'dislike' | null
+): Promise<{ reaction: 'like' | 'dislike' | null }> {
   return dbSetReaction(db, userId, trackId, type);
 }
 
 export async function getReaction(
   userId: number,
   trackId: number
-): Promise<{ reaction: "like" | "dislike" | null }> {
+): Promise<{ reaction: 'like' | 'dislike' | null }> {
   return dbGetReaction(db, userId, trackId);
 }
 
 export async function getReactedTracks(
   userId: number,
-  type: "like" | "dislike",
+  type: 'like' | 'dislike',
   page: number = 1,
   pageSize: number = 100
 ): Promise<{
@@ -663,7 +658,7 @@ export async function addTrackToPlaylist(
 ): Promise<void> {
   // Verify ownership
   if (!dbIsPlaylistOwner(db, playlistId, userId)) {
-    throw new Error("Not authorized to modify this playlist");
+    throw new Error('Not authorized to modify this playlist');
   }
 
   // Get current max position
@@ -680,7 +675,7 @@ export async function removeTrackFromPlaylist(
 ): Promise<boolean> {
   // Verify ownership
   if (!dbIsPlaylistOwner(db, playlistId, userId)) {
-    throw new Error("Not authorized to modify this playlist");
+    throw new Error('Not authorized to modify this playlist');
   }
 
   return dbRemoveTrackFromPlaylist(db, playlistId, trackId);
@@ -692,7 +687,7 @@ export async function getPlaylistById(
 ): Promise<
   | (Playlist & {
       tracks: (Track & {
-        reaction: "like" | "dislike" | null;
+        reaction: 'like' | 'dislike' | null;
         position: number;
       })[];
       ownerName: string;
@@ -709,7 +704,7 @@ export async function getPlaylistById(
   return {
     ...playlist,
     tracks: tracksWithPosition,
-    ownerName: playlist.ownerName || "Unknown",
+    ownerName: playlist.ownerName || 'Unknown',
   };
 }
 
@@ -733,7 +728,7 @@ export async function updatePlaylistOrder(
 ): Promise<void> {
   // Verify ownership
   if (!dbIsPlaylistOwner(db, playlistId, userId)) {
-    throw new Error("Not authorized to modify this playlist");
+    throw new Error('Not authorized to modify this playlist');
   }
 
   dbUpdatePlaylistOrder(db, playlistId, trackOrders);
@@ -746,7 +741,7 @@ export async function advancedSearch(
 ): Promise<{
   artists: { name: string; trackCount: number }[];
   albums: (Album & { artist: string | null; trackCount: number })[];
-  tracks: (Track & { reaction: "like" | "dislike" | null })[];
+  tracks: (Track & { reaction: 'like' | 'dislike' | null })[];
 }> {
   return dbAdvancedSearch(db, query, userId, limit);
 }
@@ -768,13 +763,13 @@ export async function getArtistById(
         createdAt: string;
         updatedAt: string | null;
       };
-      randomTracks: (Track & { reaction: "like" | "dislike" | null })[];
+      randomTracks: (Track & { reaction: 'like' | 'dislike' | null })[];
       albums: (Album & {
         trackCount: number;
-        type: "single" | "ep" | "album";
+        type: 'single' | 'ep' | 'album';
         hasImage: boolean;
       })[];
-      singles: (Track & { reaction: "like" | "dislike" | null })[];
+      singles: (Track & { reaction: 'like' | 'dislike' | null })[];
     }
   | undefined
 > {
@@ -863,7 +858,7 @@ export async function getShuffledArtistTracks(
   artistId: number,
   userId: number | null = null,
   limit: number = 50
-): Promise<(Track & { reaction: "like" | "dislike" | null })[]> {
+): Promise<(Track & { reaction: 'like' | 'dislike' | null })[]> {
   return dbGetShuffledArtistTracks(db, artistId, userId, limit);
 }
 
@@ -899,11 +894,11 @@ export async function getHomePageContent(
 ): Promise<{
   newReleases: (Album & {
     artist: string | null;
-    type: "single" | "ep" | "album";
+    type: 'single' | 'ep' | 'album';
     hasImage: boolean;
   })[];
   quickPicks: (Track & {
-    reaction: "like" | "dislike" | null;
+    reaction: 'like' | 'dislike' | null;
     artistName: string | null;
   })[];
   listenAgain: (Track & { lastPlayed: number; artistName: string | null })[];
@@ -933,7 +928,7 @@ export function getAllTracksWithReactions(
   db: Database,
   userId: number | null
 ): (Track & {
-  reaction: "like" | "dislike" | null;
+  reaction: 'like' | 'dislike' | null;
   albumHasImage: boolean | null;
 })[] {
   if (!userId) {
@@ -956,7 +951,7 @@ export function getAllTracksWithReactions(
       `
       )
       .all() as (Track & {
-      reaction: "like" | "dislike" | null;
+      reaction: 'like' | 'dislike' | null;
       albumHasImage: boolean | null;
     })[];
   }
@@ -981,7 +976,7 @@ export function getAllTracksWithReactions(
     `
     )
     .all(userId) as (Track & {
-    reaction: "like" | "dislike" | null;
+    reaction: 'like' | 'dislike' | null;
     albumHasImage: boolean | null;
   })[];
 }
@@ -991,7 +986,7 @@ export function searchTracksWithReactions(
   query: string,
   userId: number | null
 ): (Track & {
-  reaction: "like" | "dislike" | null;
+  reaction: 'like' | 'dislike' | null;
   albumHasImage: boolean | null;
 })[] {
   if (!userId) {
@@ -1032,7 +1027,7 @@ export function searchTracksWithReactions(
         searchTerm,
         searchTerm
       ) as (Track & {
-      reaction: "like" | "dislike" | null;
+      reaction: 'like' | 'dislike' | null;
       albumHasImage: boolean | null;
     })[];
   }
@@ -1076,7 +1071,7 @@ export function searchTracksWithReactions(
       searchTerm,
       searchTerm
     ) as (Track & {
-    reaction: "like" | "dislike" | null;
+    reaction: 'like' | 'dislike' | null;
     albumHasImage: boolean | null;
   })[];
 }

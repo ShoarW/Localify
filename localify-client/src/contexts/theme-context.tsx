@@ -102,39 +102,3 @@ export const useTheme = () => {
   }
   return context;
 };
-
-// Helper function to get dynamic color classes
-export const getColorClasses = (
-  type: "bg" | "text" | "border" | "fill",
-  hover = false
-) => {
-  const { primaryColor } = useTheme();
-  const colorConfig = colorMap[primaryColor];
-
-  switch (type) {
-    case "bg":
-      return hover
-        ? `hover:bg-${colorConfig.primary}-500`
-        : `bg-${colorConfig.primary}-500`;
-    case "text":
-      return hover
-        ? `hover:text-${colorConfig.primary}-500`
-        : `text-${colorConfig.primary}-500`;
-    case "border":
-      return hover
-        ? `hover:border-${colorConfig.primary}-500`
-        : `border-${colorConfig.primary}-500`;
-    case "fill":
-      return hover
-        ? `hover:fill-${colorConfig.primary}-500`
-        : `fill-${colorConfig.primary}-500`;
-    default:
-      return "";
-  }
-};
-
-// Helper function to get gradient classes
-export const getGradientClasses = () => {
-  const { gradientFrom, gradientTo } = useTheme();
-  return `${gradientFrom} ${gradientTo}`;
-};

@@ -42,6 +42,7 @@ export const PlaylistsPage = ({
       handleCloseModal();
     } catch (error) {
       setError("Failed to create playlist");
+      console.error(error);
     } finally {
       setIsCreating(false);
     }

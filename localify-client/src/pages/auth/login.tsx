@@ -16,11 +16,12 @@ export const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const response = await api.login({ username, password });
-      localStorage.setItem("token", response.token);
+      await api.login({ username, password });
+
       navigate("/");
     } catch (error) {
       setError("Invalid username or password");
+      console.error(error);
     } finally {
       setIsLoading(false);
     }

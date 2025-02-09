@@ -76,6 +76,7 @@ export const validateToken = async (): Promise<boolean> => {
     localStorage.setItem("token", data.accessToken);
     return true;
   } catch (error) {
+    console.error("Error refreshing token:", error);
     clearAuth();
     return false;
   }

@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  localify:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - STORAGE_PATH=/app/data/storage
+      - MEDIA_PATH=/app/data/media
+      - DB_NAME=/app/data/localify.db
+      - JWT_SECRET=${JWT_SECRET:-your_default_jwt_secret}
+    volumes:
+      - ./data:/app/data
+      - ${MEDIA_PATH:-./music}:/app/data/media:ro
+    restart: unless-stopped 

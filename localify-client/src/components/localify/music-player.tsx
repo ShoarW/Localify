@@ -1,5 +1,4 @@
 import {
-  Heart,
   Shuffle,
   SkipBack,
   Pause,
@@ -12,7 +11,6 @@ import {
   ThumbsUp,
   ThumbsDown,
   ListMusic,
-  X,
   Music,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -227,6 +225,7 @@ export const MusicPlayer = ({
             await audioRef.current.play();
           } catch (error) {
             setIsPlaying(false);
+            console.error(error);
           }
         }
       } catch (error) {

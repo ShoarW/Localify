@@ -1,4 +1,4 @@
-import { Search, X, Music, User, Play } from "lucide-react";
+import { Search, X, Play } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { api, SearchResults, Track } from "../../services/api";
 import { Link } from "react-router-dom";
@@ -142,6 +142,7 @@ export const SearchModal = ({
         const data = await api.advancedSearch(query);
         setResults(data);
       } catch (error) {
+        console.error(error);
         setError("Failed to perform search");
       } finally {
         setIsLoading(false);

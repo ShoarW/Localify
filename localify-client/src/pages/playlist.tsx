@@ -36,6 +36,7 @@ export const PlaylistPage = ({
         setPlaylist(data);
       } catch (error) {
         setError("Failed to fetch playlist");
+        console.error(error);
       } finally {
         setIsLoading(false);
       }
@@ -57,23 +58,24 @@ export const PlaylistPage = ({
       navigate("/playlists");
     } catch (error) {
       setError("Failed to delete playlist");
+      console.error(error);
       setIsDeleting(false);
     }
   };
 
-  const handleRemoveTrack = async (trackId: number) => {
-    if (!playlist) return;
+  // const handleRemoveTrack = async (trackId: number) => {
+  //   if (!playlist) return;
 
-    try {
-      await api.removeTrackFromPlaylist(playlist.id, trackId);
-      setPlaylist({
-        ...playlist,
-        tracks: playlist.tracks.filter((t) => t.id !== trackId),
-      });
-    } catch (error) {
-      setError("Failed to remove track");
-    }
-  };
+  //   try {
+  //     await api.removeTrackFromPlaylist(playlist.id, trackId);
+  //     setPlaylist({
+  //       ...playlist,
+  //       tracks: playlist.tracks.filter((t) => t.id !== trackId),
+  //     });
+  //   } catch (error) {
+  //     setError("Failed to remove track");
+  //   }
+  // };
 
   if (isLoading) {
     return (

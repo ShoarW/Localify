@@ -1,5 +1,4 @@
 import { Album } from "../../services/api";
-import { api } from "../../services/api";
 import { Link } from "react-router-dom";
 import { Play } from "lucide-react";
 import { PlaceholderImage } from "./placeholder-image";

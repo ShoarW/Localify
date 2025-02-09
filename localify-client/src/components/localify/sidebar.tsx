@@ -2,21 +2,19 @@ import {
   Music,
   Home,
   Search,
-  Library,
   PlusCircle,
   Heart,
   Disc,
   LogOut,
   User,
   ListMusic,
-  Menu,
   X,
 } from "lucide-react";
 import { NavItem } from "./nav-item";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState, useContext } from "react";
 import { getUser } from "../../utils/auth";
-import { Playlist, api } from "../../services/api";
+import { Playlist } from "../../services/api";
 import { SearchContext } from "../../App";
 import { useTheme } from "../../contexts/theme-context";
 

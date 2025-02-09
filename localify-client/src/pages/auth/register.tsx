@@ -23,6 +23,7 @@ export const RegisterPage = () => {
       });
     } catch (error) {
       setError("Registration failed. Please try again.");
+      console.error(error);
     } finally {
       setIsLoading(false);
     }

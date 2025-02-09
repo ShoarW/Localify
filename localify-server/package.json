@@ -2,7 +2,9 @@
   "name": "localify-server",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",
@@ -17,6 +19,9 @@
     "@types/better-sqlite3": "^7.6.12",
     "@types/mime-types": "^2.1.4",
     "@types/node": "^20.11.17",
+    "@typescript-eslint/eslint-plugin": "^8.23.0",
+    "@typescript-eslint/parser": "^8.23.0",
+    "eslint": "^8.57.1",
     "tsx": "^4.7.1"
   }
 }

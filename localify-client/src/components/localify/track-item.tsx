@@ -7,7 +7,7 @@ import {
   PlusCircle,
   ListMusic,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ReactionType, Playlist, api } from "../../services/api";
 import { ContextMenu } from "../ui/context-menu";
 import { Modal } from "../ui/modal";
@@ -95,6 +95,7 @@ export const TrackItem = ({
       }
       handleCloseModal();
     } catch (error) {
+      console.error(error);
       setError("Failed to create playlist");
     } finally {
       setIsLoading(false);

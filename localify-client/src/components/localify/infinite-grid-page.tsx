@@ -22,7 +22,7 @@ export function InfiniteGridPage<T>({
   pageSize = 50,
   className = "",
 }: InfiniteGridPageProps<T>) {
-  const { gradientFrom, gradientTo } = useTheme();
+  const { gradientFrom } = useTheme();
   const [items, setItems] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);

@@ -1,14 +1,15 @@
-import { serve } from "@hono/node-server";
-import { Hono } from "hono";
-import type { Context, Next } from "hono";
+import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
+import type { Context, Next } from 'hono';
+import { serveStatic } from '@hono/node-server/serve-static';
 
-import { initializeDatabase } from "./db/db.js";
-import dotenv from "dotenv";
+import { initializeDatabase } from './db/db.js';
+import dotenv from 'dotenv';
 import {
   loginHandler,
   signupHandler,
   refreshTokenHandler,
-} from "./controllers/auth.controller.js";
+} from './controllers/auth.controller.js';
 import {
   getAllTracksHandler,
   getTrackByIdHandler,
@@ -39,10 +40,10 @@ import {
   getPlayCountHandler,
   getTopPlayedTracksHandler,
   getHomePageHandler,
-} from "./controllers/track.controller.js";
-import { authMiddleware } from "./middleware/auth.js";
-import { permissionMiddleware } from "./middleware/permission.js";
-import { cors } from "hono/cors";
+} from './controllers/track.controller.js';
+import { authMiddleware } from './middleware/auth.js';
+import { permissionMiddleware } from './middleware/permission.js';
+import { cors } from 'hono/cors';
 
 dotenv.config();
 
@@ -50,11 +51,11 @@ dotenv.config();
 
 const app = new Hono();
 
-app.use("*", cors());
+app.use('*', cors());
 
 // Optional auth middleware - will set userId if token is valid, but won't reject if no token
 async function optionalAuthMiddleware(c: Context, next: Next) {
-  const authHeader = c.req.header("Authorization");
+  const authHeader = c.req.header('Authorization');
   if (!authHeader) {
     // No auth header, continue without auth
     return await next();
@@ -63,101 +64,106 @@ async function optionalAuthMiddleware(c: Context, next: Next) {
   try {
     await authMiddleware(c, next);
   } catch (e) {
+    console.error('Error verifying token:', e);
     // Auth failed, but continue without auth
     return await next();
   }
 }
 
 // -- Auth -- //
-app.post("/auth/login", loginHandler);
-app.post("/auth/signup", signupHandler);
-app.post("/auth/refresh", refreshTokenHandler);
+app.post('/auth/login', loginHandler);
+app.post('/auth/signup', signupHandler);
+app.post('/auth/refresh', refreshTokenHandler);
 
 // -- Homepage -- //
-app.get("/home", optionalAuthMiddleware, getHomePageHandler);
+app.get('/home', optionalAuthMiddleware, getHomePageHandler);
 
 // -- Tracks -- //
-app.get("/tracks", optionalAuthMiddleware, getAllTracksHandler);
-app.get("/tracks/:id", optionalAuthMiddleware, getTrackByIdHandler);
-app.get("/tracks/:id/stream", optionalAuthMiddleware, streamTrackHandler);
-app.get("/tracks/:id/play-count", authMiddleware, getPlayCountHandler);
-app.get("/tracks/top-played", authMiddleware, getTopPlayedTracksHandler);
+app.get('/tracks', optionalAuthMiddleware, getAllTracksHandler);
+app.get('/tracks/:id', optionalAuthMiddleware, getTrackByIdHandler);
+app.get('/tracks/:id/stream', optionalAuthMiddleware, streamTrackHandler);
+app.get('/tracks/:id/play-count', authMiddleware, getPlayCountHandler);
+app.get('/tracks/top-played', authMiddleware, getTopPlayedTracksHandler);
 app.delete(
-  "/tracks/:id",
+  '/tracks/:id',
   authMiddleware,
-  permissionMiddleware("delete_track"),
+  permissionMiddleware('delete_track'),
   deleteTrackHandler
 );
-app.get("/search", searchTracksHandler);
-app.get("/search/advanced", optionalAuthMiddleware, advancedSearchHandler);
+app.get('/search', searchTracksHandler);
+app.get('/search/advanced', optionalAuthMiddleware, advancedSearchHandler);
 
 // -- Reactions -- //
-app.post("/tracks/:id/reaction", authMiddleware, setReactionHandler);
-app.get("/tracks/:id/reaction", authMiddleware, getReactionHandler);
-app.get("/reactions", authMiddleware, getReactedTracksHandler);
+app.post('/tracks/:id/reaction', authMiddleware, setReactionHandler);
+app.get('/tracks/:id/reaction', authMiddleware, getReactionHandler);
+app.get('/reactions', authMiddleware, getReactedTracksHandler);
 
 // -- Albums -- //
-app.get("/albums", optionalAuthMiddleware, getAllAlbumsHandler);
-app.get("/albums/:id", optionalAuthMiddleware, getAlbumWithTracksHandler);
-app.get("/albums/:id/cover", streamAlbumCoverHandler);
+app.get('/albums', optionalAuthMiddleware, getAllAlbumsHandler);
+app.get('/albums/:id', optionalAuthMiddleware, getAlbumWithTracksHandler);
+app.get('/albums/:id/cover', streamAlbumCoverHandler);
 
 // -- Indexing -- //
 app.post(
-  "/index",
+  '/index',
   authMiddleware,
-  permissionMiddleware("index"),
+  permissionMiddleware('index'),
   indexDirectoryHandler
 );
 
 // Artist routes
-app.get("/artists", getAllArtistsHandler);
-app.get("/artists/:artistId", optionalAuthMiddleware, getArtistByIdHandler);
-app.get("/artists/:artistId/image", streamArtistImageHandler);
-app.get("/artists/:artistId/background", streamArtistBackgroundImageHandler);
-app.get("/artists/:artistId/shuffle", getShuffledArtistTracksHandler);
+app.get('/artists', getAllArtistsHandler);
+app.get('/artists/:artistId', optionalAuthMiddleware, getArtistByIdHandler);
+app.get('/artists/:artistId/image', streamArtistImageHandler);
+app.get('/artists/:artistId/background', streamArtistBackgroundImageHandler);
+app.get('/artists/:artistId/shuffle', getShuffledArtistTracksHandler);
 app.post(
-  "/artists",
+  '/artists',
   authMiddleware,
-  permissionMiddleware("modify_artists"),
+  permissionMiddleware('modify_artists'),
   createOrUpdateArtistHandler
 );
 app.put(
-  "/artists/:artistId",
+  '/artists/:artistId',
   authMiddleware,
-  permissionMiddleware("modify_artists"),
+  permissionMiddleware('modify_artists'),
   createOrUpdateArtistHandler
 );
 
 // Playlist routes
-app.get("/playlists", authMiddleware, getUserPlaylistsHandler);
-app.post("/playlists", authMiddleware, createPlaylistHandler);
+app.get('/playlists', authMiddleware, getUserPlaylistsHandler);
+app.post('/playlists', authMiddleware, createPlaylistHandler);
 app.get(
-  "/playlists/:playlistId",
+  '/playlists/:playlistId',
   optionalAuthMiddleware,
   getPlaylistByIdHandler
 );
-app.delete("/playlists/:playlistId", authMiddleware, deletePlaylistHandler);
+app.delete('/playlists/:playlistId', authMiddleware, deletePlaylistHandler);
 app.post(
-  "/playlists/:playlistId/tracks",
+  '/playlists/:playlistId/tracks',
   authMiddleware,
   addTrackToPlaylistHandler
 );
 app.delete(
-  "/playlists/:playlistId/tracks/:trackId",
+  '/playlists/:playlistId/tracks/:trackId',
   authMiddleware,
   removeTrackFromPlaylistHandler
 );
 app.put(
-  "/playlists/:playlistId/order",
+  '/playlists/:playlistId/order',
   authMiddleware,
   updatePlaylistOrderHandler
 );
 
-app.get("/", (c) => {
-  return c.text("Hello from Localify!");
+// Serve static files from the client build
+app.use('/*', serveStatic({ root: './static' }));
+
+// API routes should be above the catch-all route
+app.get('/', (c) => {
+  return c.redirect('/index.html');
 });
 
-const port = 3000;
+const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 console.log(`Server is running on http://localhost:${port}`);
 
 serve({

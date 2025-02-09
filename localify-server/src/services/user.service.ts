@@ -1,15 +1,14 @@
 // src/services/user.service.ts
-import { db } from "../db/db.js";
-import * as userDB from "../db/user.db.js";
-import type { SignupUser, User } from "../types/model.js";
-import { sign, verify } from "hono/jwt";
-import type { Context } from "hono";
-import { config } from "../config.js";
+import { db } from '../db/db.js';
+import * as userDB from '../db/user.db.js';
+import type { SignupUser, User } from '../types/model.js';
+import { sign, verify } from 'hono/jwt';
+import { config } from '../config.js';
 
 export async function getAllUsers(): Promise<User[]> {
   return userDB.getAllUsers(db);
 }
-export async function createUser(user: Omit<User, "id">): Promise<number> {
+export async function createUser(user: Omit<User, 'id'>): Promise<number> {
   // Additional business logic (e.g., password complexity checks) can go here
   return userDB.createUser(db, user);
 }
@@ -27,8 +26,7 @@ export async function deleteUser(id: number): Promise<boolean> {
 }
 export async function authenticateUser(
   username: string,
-  password: string,
-  c: Context
+  password: string
 ): Promise<{ accessToken: string; refreshToken: string } | null> {
   const user = await userDB.getUserByUsername(db, username);
 
@@ -48,7 +46,7 @@ export async function authenticateUser(
   // Generate refresh token (long-lived)
   const refreshPayload = {
     sub: user.id,
-    type: "refresh",
+    type: 'refresh',
     exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
   };
 
@@ -68,7 +66,7 @@ export async function refreshAccessToken(
   try {
     // Verify refresh token
     const payload = await verify(refreshToken, config.JWT_SECRET);
-    if (payload.type !== "refresh") {
+    if (payload.type !== 'refresh') {
       return null;
     }
 
@@ -102,14 +100,14 @@ export async function refreshAccessToken(
     const accessToken = await sign(accessPayload, config.JWT_SECRET);
     return { accessToken };
   } catch (error) {
-    console.error("Error refreshing token:", error);
+    console.error('Error refreshing token:', error);
     return null;
   }
 }
 
 export async function signupUser(user: SignupUser): Promise<number> {
   const usersCount = (await getAllUsers()).length;
-  const role = usersCount === 0 ? "admin" : "user";
+  const role = usersCount === 0 ? 'admin' : 'user';
   return createUser({
     ...user,
     role,

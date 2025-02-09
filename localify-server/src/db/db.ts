@@ -1,8 +1,8 @@
-import Database from "better-sqlite3";
-import { createTracksTable, migrateDatabase } from "./track.db.js";
-import { createUsersTable } from "./user.db.js";
-import { createPermissionsTable, seedPermissions } from "./permission.db.js";
-import { config } from "../config.js";
+import Database from 'better-sqlite3';
+import { createTracksTable, migrateDatabase } from './track.db.js';
+import { createUsersTable } from './user.db.js';
+import { createPermissionsTable, seedPermissions } from './permission.db.js';
+import { config } from '../config.js';
 
 const { STORAGE_PATH, DB_NAME } = config;
 

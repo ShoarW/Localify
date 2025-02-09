@@ -1,0 +1,13 @@
+.git
+**/node_modules
+**/dist
+**/.env
+**/data
+**/*.sqlite
+**/*.db
+**/coverage
+**/.vscode
+**/.idea
+**/npm-debug.log
+**/yarn-debug.log
+**/yarn-error.log 

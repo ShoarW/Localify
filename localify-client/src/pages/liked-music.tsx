@@ -23,7 +23,7 @@ export const LikedMusicPage = ({
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [, setTotal] = useState(0);
 
   useEffect(() => {
     const fetchLikedTracks = async () => {
@@ -36,6 +36,7 @@ export const LikedMusicPage = ({
         setTotalPages(data.totalPages);
         setTotal(data.total);
       } catch (error) {
+        console.error(error);
         setError("Failed to fetch liked tracks");
       } finally {
         setIsLoading(false);

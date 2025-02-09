@@ -141,33 +141,11 @@ export interface NewRelease {
   hasImage: boolean;
 }
 
-export interface QuickPick {
-  id: number;
-  title: string;
-  artistName: string | null;
-  reaction: ReactionType;
-  duration: number;
-  album: string;
-  albumId: number;
-  hasImage: boolean;
-}
-
-export interface ListenAgainTrack {
-  id: number;
-  title: string;
-  artistName: string | null;
-  lastPlayed: number;
-  duration: number;
-  album: string;
-  albumId: number;
-  hasImage: boolean;
-}
-
 export interface HomeContent {
   newReleases: NewRelease[];
-  quickPicks: QuickPick[];
-  listenAgain: ListenAgainTrack[];
-  featuredPlaylists: Playlist[];
+  quickPicks: Track[];
+  listenAgain: Track[];
+  featuredPlaylists: Track[];
 }
 
 export interface HomeOptions {
@@ -183,29 +161,11 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-export interface PaginatedAlbums extends PaginatedResponse<Album> {}
-export interface PaginatedArtists extends PaginatedResponse<Artist> {}
+export type PaginatedAlbums = PaginatedResponse<Album>;
+export type PaginatedArtists = PaginatedResponse<Artist>;
 
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-// Add token refresh function
-const refreshAccessToken = async (refreshToken: string): Promise<string> => {
-  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${refreshToken}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to refresh token");
-  }
-
-  const data = await response.json();
-  return data.accessToken;
-};
-
-// Add request interceptor
 const fetchWithToken = async (
   url: string,
   options: RequestInit = {}

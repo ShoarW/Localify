@@ -15,7 +15,7 @@ export interface Track {
   artists?: {
     id: number;
     name: string;
-    role: "primary" | "featured";
+    role: 'primary' | 'featured';
     position: number;
   }[];
 }
@@ -25,7 +25,7 @@ export interface User {
   username: string;
   passwordHash: string;
   email: string;
-  role: "admin" | "user";
+  role: 'admin' | 'user';
   createdAt: number;
   updatedAt: number | null;
 }
@@ -34,14 +34,6 @@ export interface SignupUser {
   username: string;
   email: string;
   password: string;
-}
-
-interface Permission {
-  id?: number;
-  role: "admin" | "user"; // Could also be more granular (e.g., 'edit_tracks')
-  action: string; // e.g., 'index', 'delete_track', 'create_user'
-  createdAt: number;
-  updatedAt: number | null;
 }
 
 export interface Playlist {
@@ -56,7 +48,7 @@ export interface Playlist {
 
 export interface PlaylistTrack extends Track {
   position: number;
-  reaction?: "like" | "dislike" | null;
+  reaction?: 'like' | 'dislike' | null;
 }
 
 export interface Like {
@@ -77,7 +69,7 @@ export interface Album {
   artists?: {
     id: number;
     name: string;
-    role: "primary" | "featured";
+    role: 'primary' | 'featured';
     position: number;
   }[];
 }
