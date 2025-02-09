@@ -2,6 +2,14 @@
 
 A modern web application for managing and streaming your local music library.
 
+Localify allows you to index your music library and stream it to your browser. You can create playlists, like music and curate your own music library.
+
+It also include nice UI/UX for searching and browsing your music library.
+
+![Localify](./media/localify.png)
+
+The software is super lightweight and can run on your local machine or hosted in a docker container somewhere. Supports users and authentication.
+
 ## Project Structure
 
 - `localify-client/`: React-based frontend application
@@ -138,4 +146,4 @@ docker-compose -f docker-compose.yml up -d
 
 ## License
 
-[Your License Here]
+You may use this project for personal use.

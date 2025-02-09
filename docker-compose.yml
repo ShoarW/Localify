@@ -10,11 +10,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - STORAGE_PATH=/app/data/storage
-      - MEDIA_PATH=/app/data/media
+      - STORAGE_PATH=/storage
+      - MEDIA_PATH=/media
       - DB_NAME=localify.db
       - JWT_SECRET=${JWT_SECRET:-your_default_jwt_secret}
     volumes:
-      - ./data/storage:/app/data/storage
-      - ./data/media:/app/data/media
+      - ./storage:/storage
+      - ./media:/media
     restart: unless-stopped 
