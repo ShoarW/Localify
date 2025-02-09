@@ -24,6 +24,7 @@ export function createTracksTable(db: Database) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         artistId INTEGER,
+        artistString TEXT,
         year INTEGER,
         coverPath TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -42,6 +43,7 @@ export function createTracksTable(db: Database) {
         filename TEXT NOT NULL,
         title TEXT,
         artistId INTEGER,
+        artistString TEXT,
         albumId INTEGER,
         genre TEXT,
         duration REAL,
@@ -50,6 +52,36 @@ export function createTracksTable(db: Database) {
         updatedAt DATETIME DEFAULT NULL,
         FOREIGN KEY (albumId) REFERENCES albums(id) ON DELETE SET NULL,
         FOREIGN KEY (artistId) REFERENCES artists(id) ON DELETE SET NULL
+    );
+    `
+  ).run();
+
+  // Create track_artists table for many-to-many relationship
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS track_artists (
+        trackId INTEGER NOT NULL,
+        artistId INTEGER NOT NULL,
+        role TEXT DEFAULT 'primary',
+        position INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (trackId, artistId),
+        FOREIGN KEY (trackId) REFERENCES tracks(id) ON DELETE CASCADE,
+        FOREIGN KEY (artistId) REFERENCES artists(id) ON DELETE CASCADE
+    );
+    `
+  ).run();
+
+  // Create album_artists table for many-to-many relationship
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS album_artists (
+        albumId INTEGER NOT NULL,
+        artistId INTEGER NOT NULL,
+        role TEXT DEFAULT 'primary',
+        position INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (albumId, artistId),
+        FOREIGN KEY (albumId) REFERENCES albums(id) ON DELETE CASCADE,
+        FOREIGN KEY (artistId) REFERENCES artists(id) ON DELETE CASCADE
     );
     `
   ).run();
@@ -125,6 +157,12 @@ export function getAlbumById(
       artist: string | null;
       type: "single" | "ep" | "album";
       hasImage: boolean;
+      artists: {
+        id: number;
+        name: string;
+        role: "primary" | "featured";
+        position: number;
+      }[];
     })
   | undefined {
   const result = db
@@ -135,12 +173,16 @@ export function getAlbumById(
           a.id,
           a.title,
           a.artistId,
+          a.artistString,
           ar.name as artist,
           CASE WHEN a.coverPath IS NOT NULL THEN 1 ELSE 0 END as hasImage,
-          COUNT(t.id) as trackCount
+          COUNT(t.id) as trackCount,
+          GROUP_CONCAT(DISTINCT aa.artistId || ':' || art.name || ':' || aa.role || ':' || aa.position) as artists
         FROM albums a
         LEFT JOIN artists ar ON a.artistId = ar.id
         LEFT JOIN tracks t ON t.albumId = a.id
+        LEFT JOIN album_artists aa ON aa.albumId = a.id
+        LEFT JOIN artists art ON art.id = aa.artistId
         WHERE a.id = ?
         GROUP BY a.id
       )
@@ -159,10 +201,32 @@ export function getAlbumById(
         artist: string | null;
         type: "single" | "ep" | "album";
         hasImage: boolean;
+        artists: string;
       })
     | undefined;
 
-  return result;
+  if (!result) return undefined;
+
+  // Parse the artists string into an array of objects
+  const artists = result.artists
+    ? result.artists
+        .split(",")
+        .map((artist) => {
+          const [id, name, role, position] = artist.split(":");
+          return {
+            id: parseInt(id),
+            name,
+            role: role as "primary" | "featured",
+            position: parseInt(position),
+          };
+        })
+        .sort((a, b) => a.position - b.position)
+    : [];
+
+  return {
+    ...result,
+    artists,
+  };
 }
 
 export function getAllAlbums(
@@ -264,9 +328,42 @@ export function getAllTracks(db: Database): Track[] {
 }
 
 export function getTrackById(db: Database, id: number): Track | undefined {
-  return db.prepare("SELECT * FROM tracks WHERE id = ?").get(id) as
-    | Track
-    | undefined;
+  const track = db
+    .prepare(
+      `
+      SELECT t.*, 
+             GROUP_CONCAT(DISTINCT ta.artistId || ':' || a.name || ':' || ta.role || ':' || ta.position) as artists
+      FROM tracks t
+      LEFT JOIN track_artists ta ON ta.trackId = t.id
+      LEFT JOIN artists a ON a.id = ta.artistId
+      WHERE t.id = ?
+      GROUP BY t.id
+      `
+    )
+    .get(id) as (Track & { artists: string }) | undefined;
+
+  if (!track) return undefined;
+
+  // Parse the artists string into an array of objects
+  const artists = track.artists
+    ? track.artists
+        .split(",")
+        .map((artist) => {
+          const [id, name, role, position] = artist.split(":");
+          return {
+            id: parseInt(id),
+            name,
+            role: role as "primary" | "featured",
+            position: parseInt(position),
+          };
+        })
+        .sort((a, b) => a.position - b.position)
+    : [];
+
+  return {
+    ...track,
+    artists,
+  };
 }
 
 export function getTrackByPath(

@@ -238,35 +238,96 @@ function cleanAlbumTitle(albumTitle: string): string {
   return albumTitle.replace(/\s*(?:CD|Disc)\s*\d+/i, "").trim();
 }
 
-async function findOrCreateArtist(
-  artistName: string | null
-): Promise<number | null> {
-  if (!artistName) return null;
+function separateArtists(input: string): string[] {
+  if (!input) return [];
 
-  // Try to find existing artist
-  const existingArtist = db
-    .prepare("SELECT id FROM artists WHERE name = ?")
-    .get(artistName) as { id: number } | undefined;
+  // Remove any text in parentheses (like remix info)
+  input = input.replace(/\([^)]*\)/g, "");
 
-  if (existingArtist) {
-    return existingArtist.id;
-  }
+  // Define all possible separators
+  const separators = [
+    " & ", // Ampersand
+    " x ", // Lowercase x
+    " X ", // Uppercase X
+    ", ", // Comma
+    "/", // Forward slash
+    " \\+ ", // Plus sign
+    " feat\\. ", // feat. abbreviation
+    " featuring ", // Full featuring word
+    " ft\\. ", // ft. abbreviation
+    " with ", // with conjunction
+  ];
 
-  // Create new artist
-  const result = db
-    .prepare("INSERT INTO artists (name) VALUES (?)")
-    .run(artistName);
+  // Create regex pattern
+  const pattern = new RegExp(separators.join("|"), "gi");
 
-  return result.lastInsertRowid as number;
+  // Split the string and clean up results
+  return input
+    .split(pattern)
+    .map((artist) => artist.trim())
+    .filter((artist) => artist.length > 0);
 }
 
-export async function addTrack(filePath: string): Promise<void> {
+async function findOrCreateArtists(artistString: string | null): Promise<{
+  artistId: number | null;
+  artistString: string | null;
+  artists: { id: number; name: string; role: "primary" | "featured" }[];
+}> {
+  if (!artistString) {
+    return {
+      artistId: null,
+      artistString: null,
+      artists: [],
+    };
+  }
+
+  const artists = [];
+  const artistNames = separateArtists(artistString);
+
+  // The first artist is considered primary
+  for (let i = 0; i < artistNames.length; i++) {
+    const artistName = artistNames[i];
+
+    // Try to find existing artist
+    let artist = db
+      .prepare("SELECT id, name FROM artists WHERE name = ?")
+      .get(artistName) as { id: number; name: string } | undefined;
+
+    if (!artist) {
+      // Create new artist
+      const result = db
+        .prepare("INSERT INTO artists (name) VALUES (?)")
+        .run(artistName);
+
+      artist = {
+        id: result.lastInsertRowid as number,
+        name: artistName,
+      };
+    }
+
+    artists.push({
+      id: artist.id,
+      name: artist.name,
+      role: i === 0 ? ("primary" as const) : ("featured" as const),
+    });
+  }
+
+  return {
+    artistId: artists[0]?.id || null, // Primary artist's ID
+    artistString: artistString, // Original string
+    artists, // All artists with roles
+  };
+}
+
+async function addTrack(filePath: string): Promise<void> {
   try {
     const metadata = await mm.parseFile(filePath);
     const mimeType = mime.lookup(filePath) || "application/octet-stream";
 
-    // Find or create artist for the track
-    const artistId = await findOrCreateArtist(metadata.common.artist || null);
+    // Find or create artists for the track
+    const artistInfo = await findOrCreateArtists(
+      metadata.common.artist || null
+    );
 
     // Try to find or create album if we have album metadata
     let albumId: number | null = null;
@@ -294,16 +355,32 @@ export async function addTrack(filePath: string): Promise<void> {
         // Look for cover art in the album directory
         const coverPath = await findCoverArtInDirectory(directoryPath);
 
-        // Create new album with the track's artist
+        // Find or create album artists
+        const albumArtistInfo = await findOrCreateArtists(
+          metadata.common.albumartist || metadata.common.artist || null
+        );
+
+        // Create new album
         const album: Omit<Album, "id"> = {
           title: albumTitle,
-          artistId: artistId,
+          artistId: albumArtistInfo.artistId,
+          artistString: albumArtistInfo.artistString,
           year: metadata.common.year || null,
           coverPath: coverPath,
           createdAt: new Date().getTime(),
           updatedAt: null,
         };
         albumId = dbAddAlbum(db, album);
+
+        // Add album-artist relationships
+        const insertAlbumArtist = db.prepare(`
+          INSERT INTO album_artists (albumId, artistId, role, position)
+          VALUES (?, ?, ?, ?)
+        `);
+
+        albumArtistInfo.artists.forEach((artist, index) => {
+          insertAlbumArtist.run(albumId, artist.id, artist.role, index);
+        });
       }
     }
 
@@ -311,7 +388,8 @@ export async function addTrack(filePath: string): Promise<void> {
       path: filePath,
       filename: path.basename(filePath),
       title: metadata.common.title || null,
-      artistId: artistId,
+      artistId: artistInfo.artistId,
+      artistString: artistInfo.artistString,
       albumId: albumId,
       genre: metadata.common.genre ? metadata.common.genre.join(", ") : null,
       year: metadata.common.year || null,
@@ -328,25 +406,39 @@ export async function addTrack(filePath: string): Promise<void> {
     }
 
     // Add the track
-    dbAddTrack(db, track);
+    const trackId = db
+      .prepare(
+        `
+        INSERT INTO tracks (
+          path, filename, title, artistId, artistString, albumId, 
+          genre, year, duration, mimeType, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `
+      )
+      .run(
+        track.path,
+        track.filename,
+        track.title,
+        track.artistId,
+        track.artistString,
+        track.albumId,
+        track.genre,
+        track.year,
+        track.duration,
+        track.mimeType,
+        track.createdAt,
+        track.updatedAt
+      ).lastInsertRowid as number;
 
-    // After adding the track, check if we need to update the album's artist to "Various Artists"
-    if (albumId) {
-      const albumTracks = db
-        .prepare(
-          "SELECT DISTINCT artistId FROM tracks WHERE albumId = ? AND artistId IS NOT NULL"
-        )
-        .all(albumId) as { artistId: number }[];
+    // Add track-artist relationships
+    const insertTrackArtist = db.prepare(`
+      INSERT INTO track_artists (trackId, artistId, role, position)
+      VALUES (?, ?, ?, ?)
+    `);
 
-      // If we have multiple different artists on this album
-      if (albumTracks.length > 1) {
-        const variousArtistsId = await findOrCreateArtist("Various Artists");
-        db.prepare("UPDATE albums SET artistId = ? WHERE id = ?").run(
-          variousArtistsId,
-          albumId
-        );
-      }
-    }
+    artistInfo.artists.forEach((artist, index) => {
+      insertTrackArtist.run(trackId, artist.id, artist.role, index);
+    });
   } catch (error) {
     console.error(`Error adding track ${filePath}:`, error);
     throw error;

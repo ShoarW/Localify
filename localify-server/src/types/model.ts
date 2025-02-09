@@ -4,6 +4,7 @@ export interface Track {
   filename: string;
   title: string | null;
   artistId: number | null;
+  artistString: string | null;
   albumId: number | null;
   genre: string | null;
   year: number | null;
@@ -11,6 +12,12 @@ export interface Track {
   mimeType: string;
   createdAt: number;
   updatedAt: number | null;
+  artists?: {
+    id: number;
+    name: string;
+    role: "primary" | "featured";
+    position: number;
+  }[];
 }
 
 export interface User {
@@ -62,10 +69,17 @@ export interface Album {
   id?: number;
   title: string;
   artistId: number | null;
+  artistString: string | null;
   year: number | null;
   coverPath: string | null;
   createdAt: number;
   updatedAt: number | null;
+  artists?: {
+    id: number;
+    name: string;
+    role: "primary" | "featured";
+    position: number;
+  }[];
 }
 
 export interface Artist {
