@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { createTracksTable } from "./track.db.js";
+import { createTracksTable, migrateDatabase } from "./track.db.js";
 import { createUsersTable } from "./user.db.js";
 import { createPermissionsTable, seedPermissions } from "./permission.db.js";
 import { config } from "../config.js";
@@ -19,4 +19,7 @@ export function initializeDatabase() {
   createPermissionsTable(db);
   seedPermissions(db); // Seed initial permissions
   //   seedInitialAdmin(db);
+
+  // Run migrations
+  migrateDatabase(db);
 }

@@ -2,19 +2,24 @@ import { Artist } from "../../services/api";
 import { api } from "../../services/api";
 import { Link } from "react-router-dom";
 import { User } from "lucide-react";
+import { useTheme } from "../../contexts/theme-context";
 
 interface ArtistCardProps {
   artist: Artist;
 }
 
 export const ArtistCard = ({ artist }: ArtistCardProps) => {
+  const { gradientFrom, gradientTo } = useTheme();
+
   return (
     <Link
       to={`/artists/${artist.id}`}
       className="group relative flex flex-col gap-4 p-4 bg-black/20 hover:bg-black/40 rounded-lg transition-all duration-300"
     >
       <div className="relative aspect-square overflow-hidden rounded-lg">
-        <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
+        <div
+          className={`absolute -inset-1 rounded-lg bg-gradient-to-r ${gradientFrom} ${gradientTo} opacity-0 group-hover:opacity-20 blur transition-all duration-300`}
+        />
         {artist.hasImage ? (
           <img
             src={api.getArtistImageUrl(artist.id)}

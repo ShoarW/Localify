@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { getUser } from "../utils/auth";
 import { api, Track } from "../services/api";
 import { User, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
+import { ThemePicker } from "../components/localify/theme-picker";
+import { useTheme } from "../contexts/theme-context";
 
 interface UserProfile {
   id: number;
@@ -45,6 +47,7 @@ export const ProfilePage = () => {
     removed: false,
     unchanged: false,
   });
+  const { gradientFrom, gradientTo } = useTheme();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -164,21 +167,21 @@ export const ProfilePage = () => {
       case "scanning":
         progressText = "Scanning music directory...";
         progressPercentage = 0;
-        statusColor = "text-blue-500";
+        statusColor = `text-${gradientFrom.replace("from-", "")}`;
         break;
       case "processing":
         progressText = `Processing files (${indexingProgress.current}/${indexingProgress.total})`;
         progressPercentage = indexingProgress.total
           ? (indexingProgress.current / indexingProgress.total) * 100
           : 0;
-        statusColor = "text-amber-500";
+        statusColor = `text-${gradientFrom.replace("from-", "")}`;
         break;
       case "cleanup":
         progressText = `Cleaning up library (${indexingProgress.current}/${indexingProgress.total})`;
         progressPercentage = indexingProgress.total
           ? (indexingProgress.current / indexingProgress.total) * 100
           : 0;
-        statusColor = "text-purple-500";
+        statusColor = `text-${gradientFrom.replace("from-", "")}`;
         break;
     }
 
@@ -199,7 +202,7 @@ export const ProfilePage = () => {
           </div>
           <div className="h-2 bg-white/10 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-red-500 to-rose-600 transition-all duration-300"
+              className={`h-full bg-gradient-to-r ${gradientFrom} ${gradientTo} transition-all duration-300`}
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
@@ -215,24 +218,75 @@ export const ProfilePage = () => {
         )}
 
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-green-500/10 rounded-lg p-3">
+          <div
+            className={`bg-${gradientFrom.replace(
+              "from-",
+              ""
+            )}/10 rounded-lg p-3`}
+          >
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <p className="text-green-500 font-medium">Added</p>
+              <div
+                className={`w-2 h-2 rounded-full bg-${gradientFrom.replace(
+                  "from-",
+                  ""
+                )}`}
+              />
+              <p
+                className={`text-${gradientFrom.replace(
+                  "from-",
+                  ""
+                )} font-medium`}
+              >
+                Added
+              </p>
             </div>
             <p className="text-2xl text-white">{indexingProgress.added}</p>
           </div>
-          <div className="bg-red-500/10 rounded-lg p-3">
+          <div
+            className={`bg-${gradientFrom.replace(
+              "from-",
+              ""
+            )}/10 rounded-lg p-3`}
+          >
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
-              <p className="text-red-500 font-medium">Removed</p>
+              <div
+                className={`w-2 h-2 rounded-full bg-${gradientFrom.replace(
+                  "from-",
+                  ""
+                )}`}
+              />
+              <p
+                className={`text-${gradientFrom.replace(
+                  "from-",
+                  ""
+                )} font-medium`}
+              >
+                Removed
+              </p>
             </div>
             <p className="text-2xl text-white">{indexingProgress.removed}</p>
           </div>
-          <div className="bg-blue-500/10 rounded-lg p-3">
+          <div
+            className={`bg-${gradientFrom.replace(
+              "from-",
+              ""
+            )}/10 rounded-lg p-3`}
+          >
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-2 h-2 rounded-full bg-blue-500" />
-              <p className="text-blue-500 font-medium">Unchanged</p>
+              <div
+                className={`w-2 h-2 rounded-full bg-${gradientFrom.replace(
+                  "from-",
+                  ""
+                )}`}
+              />
+              <p
+                className={`text-${gradientFrom.replace(
+                  "from-",
+                  ""
+                )} font-medium`}
+              >
+                Unchanged
+              </p>
             </div>
             <p className="text-2xl text-white">{indexingProgress.unchanged}</p>
           </div>
@@ -248,9 +302,12 @@ export const ProfilePage = () => {
       <div className="max-w-4xl mx-auto p-8">
         <h1 className="text-3xl font-bold text-white mb-8">Profile</h1>
 
+        {/* User Info Panel */}
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 shadow-2xl mb-8">
-          <div className="flex items-center gap-6 mb-8">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+          <div className="flex items-center gap-6">
+            <div
+              className={`w-24 h-24 rounded-full bg-gradient-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center`}
+            >
               <User className="w-12 h-12 text-white" />
             </div>
             <div>
@@ -262,7 +319,10 @@ export const ProfilePage = () => {
                 <span
                   className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
                     user.isAdmin
-                      ? "bg-red-500/10 text-red-500"
+                      ? `bg-${gradientFrom.replace(
+                          "from-",
+                          ""
+                        )}/10 text-${gradientFrom.replace("from-", "")}`
                       : "bg-blue-500/10 text-blue-500"
                   }`}
                 >
@@ -271,55 +331,62 @@ export const ProfilePage = () => {
               </div>
             </div>
           </div>
+        </div>
 
-          {user.isAdmin && (
-            <div className="border-t border-white/10 pt-8">
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Admin Controls
-              </h3>
+        {/* Appearance Panel */}
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 shadow-2xl mb-8">
+          <h3 className="text-lg font-semibold text-white mb-4">Appearance</h3>
+          <ThemePicker />
+        </div>
 
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-white/60 mb-2">Library Indexing</h4>
-                  <button
-                    onClick={handleForceIndex}
-                    disabled={isIndexing}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isIndexing ? (
-                      <>
-                        <RefreshCw className="w-5 h-5 animate-spin" />
-                        <span>Indexing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-5 h-5" />
-                        <span>Force Index</span>
-                      </>
-                    )}
-                  </button>
+        {/* Admin Panel */}
+        {user.isAdmin && (
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Admin Controls
+            </h3>
 
-                  {indexingError && (
-                    <p className="mt-2 text-red-500 text-sm">{indexingError}</p>
+            <div className="space-y-8">
+              <div>
+                <h4 className="text-white/60 mb-2">Library Indexing</h4>
+                <button
+                  onClick={handleForceIndex}
+                  disabled={isIndexing}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r ${gradientFrom} ${gradientTo} text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {isIndexing ? (
+                    <>
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      <span>Indexing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-5 h-5" />
+                      <span>Force Index</span>
+                    </>
                   )}
+                </button>
 
-                  {isIndexing && renderProgress()}
+                {indexingError && (
+                  <p className="mt-2 text-red-500 text-sm">{indexingError}</p>
+                )}
 
-                  {indexingResults && !isIndexing && (
-                    <div className="mt-6 bg-white/5 rounded-xl p-6">
-                      <p className="text-white font-medium mb-6">
-                        {indexingResults.message}
-                      </p>
-                      {renderTrackList(indexingResults.added, "added")}
-                      {renderTrackList(indexingResults.removed, "removed")}
-                      {renderTrackList(indexingResults.unchanged, "unchanged")}
-                    </div>
-                  )}
-                </div>
+                {isIndexing && renderProgress()}
+
+                {indexingResults && !isIndexing && (
+                  <div className="mt-6 bg-white/5 rounded-xl p-6">
+                    <p className="text-white font-medium mb-6">
+                      {indexingResults.message}
+                    </p>
+                    {renderTrackList(indexingResults.added, "added")}
+                    {renderTrackList(indexingResults.removed, "removed")}
+                    {renderTrackList(indexingResults.unchanged, "unchanged")}
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

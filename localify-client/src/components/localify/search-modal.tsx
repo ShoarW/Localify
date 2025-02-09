@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { api, SearchResults, Track } from "../../services/api";
 import { Link } from "react-router-dom";
 import { PlaceholderImage } from "./placeholder-image";
+import { useTheme } from "../../contexts/theme-context";
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export const SearchModal = ({
   onClose,
   onPlayTrack,
 }: SearchModalProps) => {
+  const { gradientFrom, gradientTo } = useTheme();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -199,7 +201,10 @@ export const SearchModal = ({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search for songs, artists, or albums..."
-              className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-red-500 transition-colors"
+              className={`w-full pl-12 pr-4 py-3 bg-white/10 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-${gradientFrom.replace(
+                "from-",
+                ""
+              )} transition-colors`}
               autoFocus
             />
           </div>
@@ -215,7 +220,12 @@ export const SearchModal = ({
         <div className="max-h-[70vh] overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              <div
+                className={`w-8 h-8 border-2 border-white/20 border-t-${gradientFrom.replace(
+                  "from-",
+                  ""
+                )} rounded-full animate-spin`}
+              />
             </div>
           ) : error ? (
             <div className="p-8 text-center text-red-500">{error}</div>
@@ -342,7 +352,9 @@ export const SearchModal = ({
                               size="sm"
                               className="absolute inset-0 group-hover:opacity-0 transition-opacity"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg">
+                            <div
+                              className={`absolute inset-0 bg-gradient-to-r ${gradientFrom} ${gradientTo} opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg`}
+                            >
                               <Play
                                 className="w-5 h-5 text-white"
                                 fill="white"

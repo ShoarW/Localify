@@ -10,6 +10,7 @@ export function createTracksTable(db: Database) {
         name TEXT NOT NULL UNIQUE,
         description TEXT,
         imagePath TEXT,
+        backgroundImagePath TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         updatedAt DATETIME DEFAULT NULL
     );
@@ -944,6 +945,7 @@ export function getArtistById(
         name: string;
         description: string | null;
         hasImage: boolean;
+        hasBackgroundImage: boolean;
       };
       randomTracks: (Track & { reaction: "like" | "dislike" | null })[];
       albums: (Album & {
@@ -961,7 +963,8 @@ export function getArtistById(
         id,
         name,
         description,
-        CASE WHEN imagePath IS NOT NULL THEN 1 ELSE 0 END as hasImage
+        CASE WHEN imagePath IS NOT NULL THEN 1 ELSE 0 END as hasImage,
+        CASE WHEN backgroundImagePath IS NOT NULL THEN 1 ELSE 0 END as hasBackgroundImage
       FROM artists 
       WHERE id = ?
     `
@@ -972,6 +975,7 @@ export function getArtistById(
         name: string;
         description: string | null;
         hasImage: boolean;
+        hasBackgroundImage: boolean;
       }
     | undefined;
 
@@ -1042,6 +1046,7 @@ export function getAllArtists(
     name: string;
     description: string | null;
     hasImage: boolean;
+    hasBackgroundImage: boolean;
     trackCount: number;
     albumCount: number;
   }[];
@@ -1066,6 +1071,7 @@ export function getAllArtists(
         a.name,
         a.description,
         CASE WHEN a.imagePath IS NOT NULL THEN 1 ELSE 0 END as hasImage,
+        CASE WHEN a.backgroundImagePath IS NOT NULL THEN 1 ELSE 0 END as hasBackgroundImage,
         COUNT(DISTINCT t.id) as trackCount,
         COUNT(DISTINCT al.id) as albumCount
       FROM artists a
@@ -1081,6 +1087,7 @@ export function getAllArtists(
     name: string;
     description: string | null;
     hasImage: boolean;
+    hasBackgroundImage: boolean;
     trackCount: number;
     albumCount: number;
   }[];
@@ -1098,6 +1105,7 @@ export function createOrUpdateArtist(
     name: string;
     description?: string | null;
     imagePath?: string | null;
+    backgroundImagePath?: string | null;
   }
 ): number {
   if (artist.id) {
@@ -1113,13 +1121,14 @@ export function createOrUpdateArtist(
     // Update existing artist
     const updateQuery = db.prepare(`
       UPDATE artists 
-      SET name = ?, description = ?, imagePath = ?, updatedAt = CURRENT_TIMESTAMP
+      SET name = ?, description = ?, imagePath = ?, backgroundImagePath = ?, updatedAt = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
     updateQuery.run(
       artist.name,
       artist.description,
       artist.imagePath,
+      artist.backgroundImagePath,
       artist.id
     );
     return artist.id;
@@ -1135,13 +1144,14 @@ export function createOrUpdateArtist(
 
     // Create new artist
     const insertQuery = db.prepare(`
-      INSERT INTO artists (name, description, imagePath)
-      VALUES (?, ?, ?)
+      INSERT INTO artists (name, description, imagePath, backgroundImagePath)
+      VALUES (?, ?, ?, ?)
     `);
     const result = insertQuery.run(
       artist.name,
       artist.description,
-      artist.imagePath
+      artist.imagePath,
+      artist.backgroundImagePath
     );
     return result.lastInsertRowid as number;
   }
@@ -1418,4 +1428,19 @@ export function getListenAgain(
     lastPlayed: number;
     artistName: string | null;
   })[];
+}
+
+export function migrateDatabase(db: Database) {
+  // Add backgroundImagePath to artists table if it doesn't exist
+  const tableInfo = db.prepare("PRAGMA table_info(artists)").all() as {
+    name: string;
+  }[];
+  if (!tableInfo.some((col) => col.name === "backgroundImagePath")) {
+    db.prepare(
+      `
+      ALTER TABLE artists
+      ADD COLUMN backgroundImagePath TEXT;
+      `
+    ).run();
+  }
 }

@@ -83,7 +83,7 @@ export const PlaceholderImage = ({
         key={imageKey}
         src={
           type === "artist"
-            ? `${api.getArtistImageUrl(id)}?t=${imageKey}`
+            ? `${api.getArtistImageUrl(id)}`
             : api.getAlbumCoverUrl(id)
         }
         alt=""

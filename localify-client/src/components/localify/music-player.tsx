@@ -21,6 +21,7 @@ import { Link } from "react-router-dom";
 import { usePlayer } from "../../hooks/use-player";
 import { updateFavicon } from "../../utils/favicon";
 import { PlaceholderImage } from "./placeholder-image";
+import { useTheme } from "../../contexts/theme-context";
 
 // Add these props to the MusicPlayer component
 interface MusicPlayerProps {
@@ -40,6 +41,7 @@ export const MusicPlayer = ({
 }: MusicPlayerProps) => {
   const audioRef = useRef(new Audio());
   const { volume: savedVolume, setVolume: setSavedVolume } = usePlayer();
+  const { gradientFrom, gradientTo } = useTheme();
 
   // State
   const [isLoading, setIsLoading] = useState(false);
@@ -416,7 +418,9 @@ export const MusicPlayer = ({
                   : "scale-100 opacity-100"
               }`}
             >
-              <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
+              <div
+                className={`absolute -inset-1 rounded-lg bg-gradient-to-r ${gradientFrom} ${gradientTo} opacity-0 group-hover:opacity-20 blur transition-all duration-300`}
+              />
               <div className="relative w-14 h-14 rounded-lg shadow-lg transform group-hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center overflow-hidden">
                 {currentTrack.albumId ? (
                   <img
@@ -462,13 +466,13 @@ export const MusicPlayer = ({
             <div className="hidden md:flex items-center gap-2">
               <ThumbsUp
                 className={`w-5 h-5 cursor-pointer transition-all duration-300 hover:scale-110 ${
-                  isLiked ? "text-green-500 fill-green-500" : "text-white/60"
+                  isLiked ? "text-green-500" : "text-white/60"
                 } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                 onClick={() => handleReaction("like")}
               />
               <ThumbsDown
                 className={`w-5 h-5 cursor-pointer transition-all duration-300 hover:scale-110 ${
-                  isDisliked ? "text-red-500 fill-red-500" : "text-white/60"
+                  isDisliked ? "text-red-500" : "text-white/60"
                 } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                 onClick={() => handleReaction("dislike")}
               />
@@ -487,7 +491,7 @@ export const MusicPlayer = ({
           <Shuffle
             className={`w-5 h-5 cursor-pointer transition-all duration-300 hidden md:block ${
               isShuffle
-                ? "text-red-500 scale-110"
+                ? `${gradientFrom.replace("from-", "text-")} scale-110`
                 : "text-white/60 hover:text-white"
             }`}
             onClick={() => setIsShuffle(!isShuffle)}
@@ -499,7 +503,7 @@ export const MusicPlayer = ({
             onClick={handlePrevious}
           />
           <button
-            className={`w-8 h-8 rounded-full bg-gradient-to-r from-red-500 to-rose-600 flex items-center justify-center transition-all duration-300 ${
+            className={`w-8 h-8 rounded-full bg-gradient-to-r ${gradientFrom} ${gradientTo} flex items-center justify-center transition-all duration-300 ${
               isLoading
                 ? "opacity-50 cursor-not-allowed"
                 : "hover:scale-110 hover:opacity-90"
@@ -525,9 +529,7 @@ export const MusicPlayer = ({
             className={`w-5 h-5 cursor-pointer transition-all duration-300 hidden md:block ${
               repeatMode === 0
                 ? "text-white/60 hover:text-white"
-                : repeatMode === 1
-                ? "text-red-500 scale-110"
-                : "text-red-500 scale-110"
+                : `${gradientFrom.replace("from-", "text-")} scale-110`
             }`}
             onClick={() => setRepeatMode((prev) => (prev + 1) % 3)}
           />
@@ -560,7 +562,7 @@ export const MusicPlayer = ({
               className="h-1 bg-white/10 rounded-full overflow-visible relative cursor-pointer"
             >
               <div
-                className="h-full bg-gradient-to-r from-red-500 to-rose-600"
+                className={`h-full bg-gradient-to-r ${gradientFrom} ${gradientTo}`}
                 style={{
                   width: `${
                     ((isDraggingTime ? tempTime : currentTime) / duration) * 100
@@ -640,7 +642,7 @@ export const MusicPlayer = ({
               className="w-24 h-1 bg-white/10 rounded-full overflow-visible relative"
             >
               <div
-                className="h-full bg-gradient-to-r from-red-500 to-rose-600"
+                className={`h-full bg-gradient-to-r ${gradientFrom} ${gradientTo}`}
                 style={{ width: `${isMuted ? 0 : volume}%` }}
               />
               <div
@@ -677,18 +679,18 @@ export const MusicPlayer = ({
                     }`}
                     onClick={() => setCurrentTrackIndex(index)}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <PlaceholderImage
                         type="album"
                         id={track.albumId}
-                        hasImage={track.albumId !== undefined}
+                        hasImage={track.hasImage}
                         size="sm"
                       />
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p
                           className={`text-sm font-medium truncate ${
                             index === currentTrackIndex
-                              ? "text-red-500"
+                              ? `text-transparent bg-clip-text bg-gradient-to-r ${gradientFrom} ${gradientTo}`
                               : "text-white"
                           }`}
                         >
@@ -700,7 +702,12 @@ export const MusicPlayer = ({
                       </div>
                     </div>
                     {index === currentTrackIndex && isPlaying && (
-                      <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                      <div
+                        className={`w-2 h-2 rounded-full bg-${gradientFrom.replace(
+                          "from-",
+                          ""
+                        )} animate-pulse shrink-0`}
+                      />
                     )}
                   </div>
                 ))}
@@ -713,7 +720,12 @@ export const MusicPlayer = ({
       {/* Glossy Background */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute inset-0 backdrop-blur-xl bg-gradient-to-r from-white/10 to-white/5" />
-        <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-rose-500/5" />
+        <div
+          className={`absolute inset-0 bg-gradient-to-r ${gradientFrom.replace(
+            "from-",
+            "from-"
+          )}/5 ${gradientTo.replace("to-", "to-")}/5`}
+        />
       </div>
     </div>
   );

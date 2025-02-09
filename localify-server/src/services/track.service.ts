@@ -670,6 +670,9 @@ export async function getArtistById(
         name: string;
         description: string | null;
         imagePath: string | null;
+        backgroundImagePath: string | null;
+        hasImage: boolean;
+        hasBackgroundImage: boolean;
         createdAt: string;
         updatedAt: string | null;
       };
@@ -695,6 +698,11 @@ export async function getArtistById(
       imagePath: result.artist.hasImage
         ? `/assets/artist/${result.artist.id}.jpg`
         : null,
+      backgroundImagePath: result.artist.hasBackgroundImage
+        ? `/assets/artist/${result.artist.id}-background.jpg`
+        : null,
+      hasImage: result.artist.hasImage,
+      hasBackgroundImage: result.artist.hasBackgroundImage,
       createdAt: new Date().toISOString(), // This is a temporary fix, should come from DB
       updatedAt: null, // This is a temporary fix, should come from DB
     },
@@ -713,6 +721,9 @@ export async function getAllArtists(
     name: string;
     description: string | null;
     imagePath: string | null;
+    backgroundImagePath: string | null;
+    hasImage: boolean;
+    hasBackgroundImage: boolean;
     trackCount: number;
     albumCount: number;
   }[];
@@ -729,6 +740,11 @@ export async function getAllArtists(
     name: artist.name,
     description: artist.description,
     imagePath: artist.hasImage ? `/assets/artist/${artist.id}.jpg` : null,
+    backgroundImagePath: artist.hasBackgroundImage
+      ? `/assets/artist/${artist.id}-background.jpg`
+      : null,
+    hasImage: artist.hasImage,
+    hasBackgroundImage: artist.hasBackgroundImage,
     trackCount: artist.trackCount,
     albumCount: artist.albumCount,
   }));
@@ -746,6 +762,7 @@ export async function createOrUpdateArtist(artist: {
   name: string;
   description?: string | null;
   imagePath?: string | null;
+  backgroundImagePath?: string | null;
 }): Promise<number> {
   return dbCreateOrUpdateArtist(db, artist);
 }

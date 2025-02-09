@@ -680,6 +680,7 @@ export async function createOrUpdateArtistHandler(c: Context) {
     const name = formData.get("name") as string;
     const description = formData.get("description") as string | null;
     const imageFile = formData.get("image") as File | null;
+    const backgroundImageFile = formData.get("backgroundImage") as File | null;
     const urlArtistId = c.req.param("artistId");
 
     if (!name) {
@@ -698,6 +699,21 @@ export async function createOrUpdateArtistHandler(c: Context) {
         return c.json({ error: "Invalid artist ID" }, 400);
       }
       artist.id = id;
+
+      // Get existing artist data to preserve image paths if no new images are uploaded
+      const existingArtist = db
+        .prepare(
+          "SELECT imagePath, backgroundImagePath FROM artists WHERE id = ?"
+        )
+        .get(id) as {
+        imagePath: string | null;
+        backgroundImagePath: string | null;
+      };
+
+      if (existingArtist) {
+        artist.imagePath = existingArtist.imagePath;
+        artist.backgroundImagePath = existingArtist.backgroundImagePath;
+      }
     }
 
     // Handle image upload if provided
@@ -718,7 +734,7 @@ export async function createOrUpdateArtistHandler(c: Context) {
         config.STORAGE_PATH,
         "assets",
         "artist",
-        `${artist.id || "temp"}.${fileExtension}`
+        `${artist.id || "temp"}.jpg`
       );
 
       // Convert File to Buffer
@@ -734,35 +750,108 @@ export async function createOrUpdateArtistHandler(c: Context) {
         .jpeg({ quality: 85 }) // Convert to JPEG with good quality
         .toFile(imagePath);
 
-      // Update the artist object with the image path
+      // Update the artist object with the new image path
       artist.imagePath = imagePath;
+    }
+
+    // Handle background image upload if provided
+    if (backgroundImageFile) {
+      const fileExtension =
+        backgroundImageFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      if (!["jpg", "jpeg", "png"].includes(fileExtension)) {
+        return c.json(
+          {
+            error: "Invalid image format. Only jpg, jpeg, and png are allowed.",
+          },
+          400
+        );
+      }
+
+      // Create the background image path
+      const backgroundImagePath = path.join(
+        config.STORAGE_PATH,
+        "assets",
+        "artist",
+        `${artist.id || "temp"}-background.jpg`
+      );
+
+      // Convert File to Buffer
+      const arrayBuffer = await backgroundImageFile.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Process background image with sharp - use different dimensions for background
+      await sharp(buffer)
+        .resize(1920, 1080, {
+          fit: "cover", // Cover the entire area
+          withoutEnlargement: true, // Don't upscale if image is smaller
+        })
+        .jpeg({ quality: 85 }) // Convert to JPEG with good quality
+        .toFile(backgroundImagePath);
+
+      // Update the artist object with the new background image path
+      artist.backgroundImagePath = backgroundImagePath;
     }
 
     const artistId = await createOrUpdateArtist(artist);
 
-    // If this was a new artist and we saved a temporary image, rename it
-    if (!artist.id && imageFile) {
-      const oldPath = path.join(
-        config.STORAGE_PATH,
-        "assets",
-        "artist",
-        "temp.jpg" // We're always saving as jpg now
-      );
-      const newPath = path.join(
-        config.STORAGE_PATH,
-        "assets",
-        "artist",
-        `${artistId}.jpg`
-      );
-      await fs.promises.rename(oldPath, newPath);
+    // If this was a new artist and we saved temporary images, rename them
+    if (!artist.id) {
+      if (imageFile) {
+        const oldPath = path.join(
+          config.STORAGE_PATH,
+          "assets",
+          "artist",
+          "temp.jpg"
+        );
+        const newPath = path.join(
+          config.STORAGE_PATH,
+          "assets",
+          "artist",
+          `${artistId}.jpg`
+        );
+        await fs.promises.rename(oldPath, newPath);
+      }
 
-      // Update the image path in the database
-      await createOrUpdateArtist({
-        id: artistId,
-        name: artist.name,
-        description: artist.description,
-        imagePath: newPath,
-      });
+      if (backgroundImageFile) {
+        const oldPath = path.join(
+          config.STORAGE_PATH,
+          "assets",
+          "artist",
+          "temp-background.jpg"
+        );
+        const newPath = path.join(
+          config.STORAGE_PATH,
+          "assets",
+          "artist",
+          `${artistId}-background.jpg`
+        );
+        await fs.promises.rename(oldPath, newPath);
+      }
+
+      // Update the image paths in the database for new artist
+      if (imageFile || backgroundImageFile) {
+        await createOrUpdateArtist({
+          id: artistId,
+          name: artist.name,
+          description: artist.description,
+          imagePath: imageFile
+            ? path.join(
+                config.STORAGE_PATH,
+                "assets",
+                "artist",
+                `${artistId}.jpg`
+              )
+            : null,
+          backgroundImagePath: backgroundImageFile
+            ? path.join(
+                config.STORAGE_PATH,
+                "assets",
+                "artist",
+                `${artistId}-background.jpg`
+              )
+            : null,
+        });
+      }
     }
 
     return c.json({ id: artistId }, artist.id ? 200 : 201);
@@ -847,6 +936,81 @@ export async function streamArtistImageHandler(c: Context) {
   } catch (error) {
     console.error("Error streaming artist image:", error);
     return c.json({ error: "Error streaming artist image" }, 500);
+  }
+}
+
+export async function streamArtistBackgroundImageHandler(c: Context) {
+  const artistId = parseInt(c.req.param("artistId"));
+  if (isNaN(artistId)) {
+    return c.json({ error: "Invalid artist ID." }, 400);
+  }
+
+  // Get the full artist data to access backgroundImagePath
+  const artist = db
+    .prepare("SELECT backgroundImagePath FROM artists WHERE id = ?")
+    .get(artistId) as { backgroundImagePath: string | null };
+
+  if (!artist || !artist.backgroundImagePath) {
+    return c.json({ error: "Artist has no background image" }, 404);
+  }
+
+  // Check if the file exists and is readable
+  try {
+    await fs.promises.access(artist.backgroundImagePath, fs.constants.R_OK);
+  } catch (err) {
+    console.error(
+      "Background image not found or not readable:",
+      artist.backgroundImagePath
+    );
+    return c.json({ error: "Background image not found or not readable" }, 404);
+  }
+
+  try {
+    const stat = await fs.promises.stat(artist.backgroundImagePath);
+    const fileSize = stat.size;
+    const mimeType =
+      mime.lookup(artist.backgroundImagePath) || "application/octet-stream";
+
+    const file = fs.createReadStream(artist.backgroundImagePath);
+    const stream = new ReadableStream({
+      start(controller) {
+        file.on("data", (chunk) => {
+          try {
+            controller.enqueue(chunk);
+          } catch (error) {
+            console.error("Error enqueueing chunk:", error);
+            controller.error(error);
+            file.destroy();
+          }
+        });
+
+        file.on("end", () => {
+          try {
+            controller.close();
+          } catch (error) {
+            console.error("Error closing controller:", error);
+          }
+        });
+
+        file.on("error", (err) => {
+          console.error("File stream error:", err);
+          controller.error(err);
+          file.destroy();
+        });
+      },
+      cancel() {
+        file.destroy();
+      },
+    });
+
+    // Set cache headers since background images rarely change
+    c.header("Cache-Control", "public, max-age=31536000"); // Cache for 1 year
+    c.header("Content-Length", fileSize.toString());
+    c.header("Content-Type", mimeType);
+    return c.body(stream);
+  } catch (error) {
+    console.error("Error streaming background image:", error);
+    return c.json({ error: "Error streaming background image" }, 500);
   }
 }
 

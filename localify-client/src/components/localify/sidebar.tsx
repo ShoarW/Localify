@@ -18,6 +18,7 @@ import { useEffect, useState, useContext } from "react";
 import { getUser } from "../../utils/auth";
 import { Playlist, api } from "../../services/api";
 import { SearchContext } from "../../App";
+import { useTheme } from "../../contexts/theme-context";
 
 interface UserData {
   id: number;
@@ -35,6 +36,7 @@ export const Sidebar = ({ playlists, isOpen, onClose }: SidebarProps) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserData | null>(null);
   const { openSearch } = useContext(SearchContext);
+  const { gradientFrom, gradientTo } = useTheme();
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -99,7 +101,9 @@ export const Sidebar = ({ playlists, isOpen, onClose }: SidebarProps) => {
       <div className="p-6">
         <div className="flex items-center justify-between mb-8">
           <Link to="/" className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-red-500 to-rose-600">
+            <div
+              className={`p-2 rounded-xl bg-gradient-to-br ${gradientFrom} ${gradientTo}`}
+            >
               <Music className="w-6 h-6 text-white" />
             </div>
             <span className="text-white text-xl font-bold tracking-wider">
@@ -180,16 +184,18 @@ export const Sidebar = ({ playlists, isOpen, onClose }: SidebarProps) => {
         <div className="p-4 border-t border-white/10">
           <Link
             to="/profile"
-            className="flex items-center gap-3 p-2 rounded-xl bg-white/5 backdrop-blur-xl hover:bg-white/10 transition-colors"
+            className="flex items-center gap-3 p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
             onClick={onClose}
           >
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+            <div
+              className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center`}
+            >
               <User className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white font-medium truncate">{user.username}</p>
               {user.isAdmin && (
-                <p className="text-red-500/80 text-sm truncate">Admin</p>
+                <p className="text-white/60 text-sm truncate">Admin</p>
               )}
             </div>
             <button
@@ -198,7 +204,7 @@ export const Sidebar = ({ playlists, isOpen, onClose }: SidebarProps) => {
                 e.stopPropagation();
                 handleLogout();
               }}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              className="p-2 rounded-lg hover:bg-white/20 transition-colors"
               title="Logout"
             >
               <LogOut className="w-5 h-5 text-white/60 hover:text-white" />

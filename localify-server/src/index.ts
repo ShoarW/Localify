@@ -34,6 +34,7 @@ import {
   getArtistByIdHandler,
   createOrUpdateArtistHandler,
   streamArtistImageHandler,
+  streamArtistBackgroundImageHandler,
   getShuffledArtistTracksHandler,
   getPlayCountHandler,
   getTopPlayedTracksHandler,
@@ -112,11 +113,8 @@ app.post(
 app.get("/artists", getAllArtistsHandler);
 app.get("/artists/:artistId", optionalAuthMiddleware, getArtistByIdHandler);
 app.get("/artists/:artistId/image", streamArtistImageHandler);
-app.get(
-  "/artists/:artistId/shuffle",
-  optionalAuthMiddleware,
-  getShuffledArtistTracksHandler
-);
+app.get("/artists/:artistId/background", streamArtistBackgroundImageHandler);
+app.get("/artists/:artistId/shuffle", getShuffledArtistTracksHandler);
 app.post(
   "/artists",
   authMiddleware,

@@ -12,6 +12,7 @@ import { ReactionType, Playlist, api } from "../../services/api";
 import { ContextMenu } from "../ui/context-menu";
 import { Modal } from "../ui/modal";
 import { PlaceholderImage } from "./placeholder-image";
+import { useTheme } from "../../contexts/theme-context";
 
 interface TrackItemProps {
   title: string;
@@ -46,6 +47,7 @@ export const TrackItem = ({
   showArt,
   albumId,
 }: TrackItemProps) => {
+  const { gradientFrom, gradientTo } = useTheme();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
@@ -154,7 +156,9 @@ export const TrackItem = ({
             <div className="w-8 text-center text-sm text-white/40 group-hover:text-white/60">
               {isActive ? (
                 isPlaying ? (
-                  <div className="w-4 h-4 mx-auto rounded-sm bg-gradient-to-r from-red-500 to-rose-600 animate-pulse" />
+                  <div
+                    className={`w-4 h-4 mx-auto rounded-sm bg-gradient-to-r ${gradientFrom} ${gradientTo} animate-pulse`}
+                  />
                 ) : (
                   <Pause className="w-4 h-4 mx-auto text-white" fill="white" />
                 )
@@ -173,7 +177,7 @@ export const TrackItem = ({
             <p
               className={`text-sm font-medium truncate ${
                 isActive
-                  ? "text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-rose-600"
+                  ? `text-transparent bg-clip-text bg-gradient-to-r ${gradientFrom} ${gradientTo}`
                   : "text-white"
               }`}
             >
@@ -196,10 +200,7 @@ export const TrackItem = ({
                     : "text-white/40 hover:text-white/60 hover:bg-white/5 opacity-0 group-hover:opacity-100"
                 } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                <ThumbsUp
-                  className="w-4 h-4"
-                  fill={reaction === "like" ? "currentColor" : "none"}
-                />
+                <ThumbsUp className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleReaction("dislike")}
@@ -210,10 +211,7 @@ export const TrackItem = ({
                     : "text-white/40 hover:text-white/60 hover:bg-white/5 opacity-0 group-hover:opacity-100"
                 } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                <ThumbsDown
-                  className="w-4 h-4"
-                  fill={reaction === "dislike" ? "currentColor" : "none"}
-                />
+                <ThumbsDown className="w-4 h-4" />
               </button>
             </div>
             <ContextMenu
@@ -271,7 +269,10 @@ export const TrackItem = ({
               type="text"
               value={newPlaylistName}
               onChange={(e) => setNewPlaylistName(e.target.value)}
-              className="w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-red-500 transition-colors"
+              className={`w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-${gradientFrom.replace(
+                "from-",
+                ""
+              )} transition-colors`}
               placeholder="My Awesome Playlist"
             />
           </div>
@@ -282,7 +283,10 @@ export const TrackItem = ({
             <textarea
               value={newPlaylistDescription}
               onChange={(e) => setNewPlaylistDescription(e.target.value)}
-              className="w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-red-500 transition-colors"
+              className={`w-full px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white focus:outline-none focus:border-${gradientFrom.replace(
+                "from-",
+                ""
+              )} transition-colors`}
               placeholder="A collection of my favorite tracks"
               rows={3}
             />
@@ -297,7 +301,7 @@ export const TrackItem = ({
             <button
               onClick={handleCreatePlaylist}
               disabled={!newPlaylistName.trim() || isLoading}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r ${gradientFrom} ${gradientTo} text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />

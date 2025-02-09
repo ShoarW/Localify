@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback, ReactNode } from "react";
+import { useTheme } from "../../contexts/theme-context";
 
 interface InfiniteGridPageProps<T> {
   title: string;
@@ -21,6 +22,7 @@ export function InfiniteGridPage<T>({
   pageSize = 50,
   className = "",
 }: InfiniteGridPageProps<T>) {
+  const { gradientFrom, gradientTo } = useTheme();
   const [items, setItems] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -77,7 +79,12 @@ export function InfiniteGridPage<T>({
       {/* Loader */}
       <div ref={loaderRef} className="mt-8 flex justify-center">
         {isLoading && (
-          <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          <div
+            className={`w-8 h-8 border-2 border-white/20 border-t-${gradientFrom.replace(
+              "from-",
+              ""
+            )} rounded-full animate-spin`}
+          />
         )}
       </div>
     </div>

@@ -25,6 +25,8 @@ import { ArtistsPage } from "./components/localify/artists-page";
 import { ArtistPage } from "./components/localify/artist-page";
 import { PlayerProvider } from "./hooks/use-player";
 import { Menu } from "lucide-react";
+import { ThemeProvider, useTheme } from "./contexts/theme-context";
+import { colorMap } from "./contexts/theme-context";
 
 // Create a context for the search modal
 export const SearchContext = React.createContext<{
@@ -49,15 +51,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // App Layout component
 const AppLayout = () => {
-  // Current playlist being played
   const [currentPlaylist, setCurrentPlaylist] = useState<Track[]>([]);
   const [currentTrackId, setCurrentTrackId] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  // Add playlist state
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isPlaylistsLoading, setIsPlaylistsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { primaryColor } = useTheme();
 
   // Add playlist fetching effect
   useEffect(() => {
@@ -103,7 +104,13 @@ const AppLayout = () => {
         closeSearch: () => setIsSearchOpen(false),
       }}
     >
-      <div className="relative h-screen bg-black flex flex-col min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black">
+      <div className="relative h-screen bg-black flex flex-col min-h-screen">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `linear-gradient(135deg, ${colorMap[primaryColor].color}15 0%, #000000 50%, ${colorMap[primaryColor].secondaryColor}15 100%)`,
+          }}
+        />
         <div
           className="relative flex flex-1 overflow-hidden"
           style={{ fontFamily: "'Outfit', sans-serif" }}
@@ -240,26 +247,28 @@ const AppLayout = () => {
 
 function App() {
   return (
-    <Router>
-      <PlayerProvider>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap"
-          rel="stylesheet"
-        />
-        <Routes>
-          <Route path="/auth/login" element={<LoginPage />} />
-          <Route path="/auth/register" element={<RegisterPage />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }
+    <ThemeProvider>
+      <Router>
+        <PlayerProvider>
+          <link
+            href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap"
+            rel="stylesheet"
           />
-        </Routes>
-      </PlayerProvider>
-    </Router>
+          <Routes>
+            <Route path="/auth/login" element={<LoginPage />} />
+            <Route path="/auth/register" element={<RegisterPage />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </PlayerProvider>
+      </Router>
+    </ThemeProvider>
   );
 }
 

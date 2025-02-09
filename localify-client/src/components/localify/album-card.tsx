@@ -3,6 +3,7 @@ import { api } from "../../services/api";
 import { Link } from "react-router-dom";
 import { Play } from "lucide-react";
 import { PlaceholderImage } from "./placeholder-image";
+import { useTheme } from "../../contexts/theme-context";
 
 interface AlbumCardProps {
   album: Album;
@@ -10,6 +11,8 @@ interface AlbumCardProps {
 }
 
 export const AlbumCard = ({ album, onPlay }: AlbumCardProps) => {
+  const { gradientFrom, gradientTo } = useTheme();
+
   const handlePlayClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -22,7 +25,9 @@ export const AlbumCard = ({ album, onPlay }: AlbumCardProps) => {
       className="group relative flex flex-col gap-4 p-4 bg-black/20 hover:bg-black/40 rounded-lg transition-all duration-300"
     >
       <div className="relative aspect-square overflow-hidden rounded-lg">
-        <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
+        <div
+          className={`absolute -inset-1 rounded-lg bg-gradient-to-r ${gradientFrom} ${gradientTo} opacity-0 group-hover:opacity-20 blur transition-all duration-300`}
+        />
         <PlaceholderImage
           type="album"
           id={album.id}
@@ -33,7 +38,7 @@ export const AlbumCard = ({ album, onPlay }: AlbumCardProps) => {
         {onPlay && (
           <button
             onClick={handlePlayClick}
-            className="absolute right-2 bottom-2 w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transform translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 shadow-xl"
+            className={`absolute right-2 bottom-2 w-10 h-10 rounded-full bg-gradient-to-br ${gradientFrom} ${gradientTo} hover:opacity-90 flex items-center justify-center transform translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 shadow-xl`}
           >
             <Play className="w-5 h-5 text-white" fill="white" />
           </button>

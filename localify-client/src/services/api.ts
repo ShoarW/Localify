@@ -121,6 +121,7 @@ export interface Artist {
   name: string;
   description: string | null;
   hasImage: boolean;
+  hasBackgroundImage: boolean;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -674,7 +675,12 @@ export const api = {
 
   updateArtist: async (
     artistId: number,
-    data: { name: string; description: string | null; image?: File | null }
+    data: {
+      name: string;
+      description: string | null;
+      image?: File | null;
+      backgroundImage?: File | null;
+    }
   ): Promise<{ id: number; artistId: number }> => {
     const formData = new FormData();
     formData.append("name", data.name);
@@ -683,6 +689,9 @@ export const api = {
     }
     if (data.image) {
       formData.append("image", data.image);
+    }
+    if (data.backgroundImage) {
+      formData.append("backgroundImage", data.backgroundImage);
     }
 
     const response = await fetch(`${API_BASE_URL}/artists/${artistId}`, {
@@ -698,6 +707,10 @@ export const api = {
 
   getArtistImageUrl: (artistId: number): string => {
     return `${API_BASE_URL}/artists/${artistId}/image`;
+  },
+
+  getArtistBackgroundUrl: (artistId: number): string => {
+    return `${API_BASE_URL}/artists/${artistId}/background`;
   },
 
   // Artist shuffle endpoint
