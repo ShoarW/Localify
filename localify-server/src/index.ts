@@ -6,7 +6,6 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 import { initializeDatabase } from "./db/db.js";
-import dotenv from "dotenv";
 import {
   loginHandler,
   signupHandler,
@@ -46,8 +45,7 @@ import {
 import { authMiddleware } from "./middleware/auth.js";
 import { permissionMiddleware } from "./middleware/permission.js";
 import { cors } from "hono/cors";
-
-dotenv.config();
+import { env } from "./env.js";
 
 const app = new Hono();
 const api = new Hono();
@@ -183,7 +181,7 @@ app.use("/*", async (c, next) => {
   });
 });
 
-const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+const port = env.PORT;
 console.log(`Server is running on http://localhost:${port}`);
 
 serve({

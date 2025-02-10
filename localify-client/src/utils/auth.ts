@@ -61,12 +61,15 @@ export const validateToken = async (): Promise<boolean> => {
 
   // Try to refresh the access token
   try {
-    const response = await fetch("http://localhost:3000/auth/refresh", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${refreshToken}`,
-      },
-    });
+    const response = await fetch(
+      import.meta.env.VITE_API_URL + "/auth/refresh",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${refreshToken}`,
+        },
+      }
+    );
 
     if (!response.ok) {
       throw new Error("Failed to refresh token");

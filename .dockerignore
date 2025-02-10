@@ -1,7 +1,7 @@
 .git
 **/node_modules
 **/dist
-**/.env
+**/.env.*
 **/data
 **/*.sqlite
 **/*.db
@@ -11,3 +11,7 @@
 **/npm-debug.log
 **/yarn-debug.log
 **/yarn-error.log 
+
+**/data/
+**/media/
+**/storage/

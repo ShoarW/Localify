@@ -50,8 +50,8 @@ export async function authenticateUser(
     exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
   };
 
-  const accessToken = await sign(accessPayload, config.JWT_SECRET);
-  const refreshToken = await sign(refreshPayload, config.JWT_SECRET);
+  const accessToken = await sign(accessPayload, config.JWT_SECRET!);
+  const refreshToken = await sign(refreshPayload, config.JWT_SECRET!);
 
   // Store refresh token in database
   const expiresAt = new Date(refreshPayload.exp * 1000);
@@ -65,7 +65,7 @@ export async function refreshAccessToken(
 ): Promise<{ accessToken: string } | null> {
   try {
     // Verify refresh token
-    const payload = await verify(refreshToken, config.JWT_SECRET);
+    const payload = await verify(refreshToken, config.JWT_SECRET!);
     if (payload.type !== "refresh") {
       return null;
     }
@@ -97,7 +97,7 @@ export async function refreshAccessToken(
       exp: Math.floor(Date.now() / 1000) + 15 * 60, // 15 minutes
     };
 
-    const accessToken = await sign(accessPayload, config.JWT_SECRET);
+    const accessToken = await sign(accessPayload, config.JWT_SECRET!);
     return { accessToken };
   } catch (error) {
     console.error("Error refreshing token:", error);

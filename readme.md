@@ -6,7 +6,7 @@ Localify allows you to index your music library and stream it to your browser. Y
 
 It also include nice UI/UX for searching and browsing your music library.
 
-![Localify](./media/localify.png)
+![Localify](./assets/localify.png)
 
 The software is super lightweight and can run on your local machine or hosted in a docker container somewhere. Supports users and authentication.
 
@@ -37,10 +37,8 @@ cd localify
 cp .env.example .env
 ```
 
-3. Update the `.env` file with your configuration:
-- Set `MEDIA_PATH` to your music library location
+3. Update the `.env` file
 - Generate a secure `JWT_SECRET`
-- Adjust other settings as needed
 
 ### Running the Server
 

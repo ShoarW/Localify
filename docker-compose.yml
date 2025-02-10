@@ -6,13 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "4500:3000"
     environment:
       - NODE_ENV=production
-      - PORT=3000
-      - STORAGE_PATH=/storage
-      - MEDIA_PATH=/media
-      - DB_NAME=localify.db
       - JWT_SECRET=${JWT_SECRET:-your_default_jwt_secret}
     volumes:
       - ./storage:/storage

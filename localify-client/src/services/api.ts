@@ -163,8 +163,7 @@ export interface PaginatedResponse<T> {
 export type PaginatedAlbums = PaginatedResponse<Album>;
 export type PaginatedArtists = PaginatedResponse<Artist>;
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_URL || "http://localhost:3000") + "/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const fetchWithToken = async (
   url: string,

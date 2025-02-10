@@ -1,3 +1,7 @@
-/data
-/dist
-/**/dist
+**/data/** */
+**/media/**
+**/storage/**
+**/dist/**
+
+/media
+/storage

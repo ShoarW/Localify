@@ -26,7 +26,8 @@ lerna-debug.log*
 
 # misc
 .DS_Store
-/localify-media/*
-/localify-storage/*
 
 venv
+
+**/media/*
+**/storage/*
