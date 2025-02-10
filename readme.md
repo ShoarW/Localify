@@ -25,11 +25,26 @@ You'll only need to mount the storage if you want to persist your data.
 
 Music library is required - there is no default music library or upload feature.
 
+You'll also need to set a JWT secret. You can generate one with `openssl rand -base64 32` or you can use [https://jwtsecret.com/generate](https://jwtsecret.com/generate). It honestly don't really matter how you generate it since this application should be running locally and not exposed to the internet.
+
+To run the docker image, you can use the following command:
+
 ```bash
-docker run -d -p 3000:3000 -v /path/to/your/music:/media -v /path/to/your/storage:/storage ghcr.io/shoarw/localify:latest
+docker run -d -p 3000:3000 -v /path/to/your/music:/media:ro -v /path/to/your/storage:/storage -e JWT_SECRET=your_jwt_secret_here ghcr.io/shoarw/localify:latest
 ```
 
-The application will be available at http://localhost:3000
+If you don't care about persisting your data, you can omit the `-v /path/to/your/storage:/storage` part.
+
+Just run the following command:
+```bash
+docker run -d -p 3000:3000 -v /path/to/your/music:/media:ro -e JWT_SECRET=your_jwt_secret_here ghcr.io/shoarw/localify:latest
+```
+
+The application will be available at http://localhost:3000 (or whatever port you specified)
+
+To use the application, you'll need to create an account first - the first account will automatically be an admin.
+
+Head to the profile page on the bottom left and click the "Force Index" button. This will index your music library. This may take a while depending on the size of your music library. If you close the page the backend is still indexing the application will crash. (TODO: fix this)
 
 ## Project Structure
 
