@@ -10,11 +10,31 @@ It also include nice UI/UX for searching and browsing your music library.
 
 The software is super lightweight and can run on your local machine or hosted in a docker container somewhere. Supports users and authentication.
 
+# Running the Docker Image
+
+You can get the docker image from [Github Container Registry](https://github.com/ShoarW/Localify/pkgs/container/localify)
+
+Pull the image:
+```bash
+docker pull ghcr.io/shoarw/localify:latest
+```
+
+Run the image and mount your music library and storage.
+
+You'll only need to mount the storage if you want to persist your data.
+
+Music library is required - there is no default music library or upload feature.
+
+```bash
+docker run -d -p 3000:3000 -v /path/to/your/music:/media -v /path/to/your/storage:/storage ghcr.io/shoarw/localify:latest
+```
+
+The application will be available at http://localhost:3000
+
 ## Project Structure
 
 - `localify-client/`: React-based frontend application
 - `localify-server/`: Hono-based backend server
-- `data/`: Storage for database and media files
 
 ## Prerequisites
 
@@ -28,7 +48,7 @@ The software is super lightweight and can run on your local machine or hosted in
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/ShoarW/Localify.git
 cd localify
 ```
 
@@ -92,55 +112,24 @@ cp .env.example .env
 ```
 
 2. Update the `.env` file:
-- Set `MEDIA_PATH` to your music library location
 - Generate a secure `JWT_SECRET`
-- Set `VITE_API_URL` to your server's URL (e.g., http://localhost:3000)
 
-3. Create necessary directories:
-```bash
-mkdir -p data/storage data/media
-```
-
-4. Build and start the containers:
+3. Build and start the containers:
 ```bash
 docker-compose up --build
 ```
 
-The application will be available at http://localhost:3000
+The application will be available at http://localhost:4500
 
 ### Environment Variables
 
 #### Server Configuration
-- `PORT`: Server port (default: 3000)
-- `NODE_ENV`: Environment mode (development/production)
-- `STORAGE_PATH`: Path for application storage
-- `MEDIA_PATH`: Path to your music library
-- `DB_NAME`: SQLite database filename
 - `JWT_SECRET`: Secret key for JWT tokens
+
 
 #### Client Configuration
 - `VITE_API_URL`: Backend API URL
 
-## Development Notes
-
-- The server uses SQLite for data storage
-- Media files are served from the configured `MEDIA_PATH`
-- The client is built with Vite and React
-- API documentation is available at http://localhost:3000/docs (when running in development mode)
-
-## Production Deployment
-
-For production deployment:
-
-1. Update environment variables for production:
-- Set `NODE_ENV=production`
-- Configure a secure `JWT_SECRET`
-- Set appropriate paths for storage and media
-
-2. Build and run with Docker Compose:
-```bash
-docker-compose -f docker-compose.yml up -d
-```
 
 ## License
 
