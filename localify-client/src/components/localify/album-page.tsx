@@ -188,13 +188,9 @@ export const AlbumPage = ({
             <TrackItem
               key={track.id}
               number={index + 1}
-              title={track.title}
-              artist={track.artist}
-              duration={Math.floor(track.duration)}
+              track={track}
               isActive={currentTrackIndex === index}
               isPlaying={currentTrackIndex === index && isPlaying}
-              reaction={track.reaction}
-              trackId={track.id}
               onClick={() => handleTrackClick(index)}
               onReactionUpdate={handleReactionUpdate}
               playlists={playlists}

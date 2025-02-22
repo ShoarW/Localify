@@ -3,20 +3,15 @@ import { validateToken, clearAuth } from "../utils/auth";
 export interface Track {
   id: number;
   title: string;
-  artist: string;
   artistId: number;
   artistName: string;
   duration: number;
   reaction: ReactionType;
-  album: string;
+  albumName: string;
   albumId: number;
   hasImage: boolean;
   year: number;
   genre: string;
-  mimeType: string;
-  createdAt: number;
-  updatedAt: null;
-  path: string;
 }
 
 export interface Album {
