@@ -190,13 +190,9 @@ export const ContentView = ({
             {tracks.map((track, index) => (
               <TrackItem
                 key={track.id}
-                title={track.title}
-                artist={track.artist}
-                duration={Math.floor(track.duration)}
+                track={track}
                 isActive={currentTrackIndex === index}
                 isPlaying={currentTrackIndex === index && isPlaying}
-                reaction={track.reaction}
-                trackId={track.id}
                 onClick={() => onTrackSelect(index)}
                 playlists={playlists}
                 onPlaylistsChange={onPlaylistsChange}

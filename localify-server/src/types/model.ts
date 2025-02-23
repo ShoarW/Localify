@@ -1,23 +1,17 @@
+export type ReactionType = "like" | "dislike" | null;
+
 export interface Track {
-  id?: number;
-  path: string;
-  filename: string;
-  title: string | null;
-  artistId: number | null;
-  artistString: string | null;
-  albumId: number | null;
-  genre: string | null;
-  year: number | null;
-  duration: number | null;
-  mimeType: string;
-  createdAt: number;
-  updatedAt: number | null;
-  artists?: {
-    id: number;
-    name: string;
-    role: "primary" | "featured";
-    position: number;
-  }[];
+  id: number;
+  title: string;
+  artistId: number;
+  artistName: string;
+  duration: number;
+  reaction: ReactionType;
+  albumName: string;
+  albumId: number;
+  hasImage: boolean;
+  year: number;
+  genre: string;
 }
 
 export interface User {
@@ -46,7 +40,6 @@ export interface Playlist {
 
 export interface PlaylistTrack extends Track {
   position: number;
-  reaction?: "like" | "dislike" | null;
 }
 
 export interface Like {

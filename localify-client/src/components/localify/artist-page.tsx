@@ -261,13 +261,9 @@ export const ArtistPage = ({
                 <TrackItem
                   key={track.id}
                   number={index + 1}
-                  title={track.title}
-                  artist={track.artist}
-                  duration={Math.floor(track.duration)}
+                  track={track}
                   isActive={currentTrackId === track.id}
                   isPlaying={currentTrackId === track.id && isPlaying}
-                  reaction={track.reaction}
-                  trackId={track.id}
                   onClick={() => handleTrackClick(randomTracks, index)}
                   onReactionUpdate={handleReactionUpdate}
                   playlists={playlists}
@@ -308,36 +304,14 @@ export const ArtistPage = ({
             <div className="space-y-1">
               {singles.map((track, index) => {
                 // Convert single track to full Track type
-                const fullTrack: Track = {
-                  id: track.id,
-                  title: track.title,
-                  artist: artist.name,
-                  artistId: artist.id,
-                  artistName: artist.name,
-                  duration: track.duration,
-                  reaction: track.reaction,
-                  album: "Single",
-                  albumId: 0,
-                  hasImage: false,
-                  year: 0,
-                  genre: "",
-                  mimeType: "",
-                  createdAt: 0,
-                  updatedAt: null,
-                  path: "",
-                };
                 return (
                   <TrackItem
                     key={track.id}
                     number={index + 1}
-                    title={track.title}
-                    artist={artist.name}
-                    duration={track.duration}
+                    track={track}
                     isActive={currentTrackId === track.id}
                     isPlaying={currentTrackId === track.id && isPlaying}
-                    reaction={track.reaction}
-                    trackId={track.id}
-                    onClick={() => handleTrackClick([fullTrack], 0)}
+                    onClick={() => handleTrackClick([track], 0)}
                     onReactionUpdate={handleReactionUpdate}
                     playlists={playlists}
                     onPlaylistsChange={onPlaylistsChange}

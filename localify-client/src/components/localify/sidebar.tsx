@@ -96,85 +96,87 @@ export const Sidebar = ({ playlists, isOpen, onClose }: SidebarProps) => {
         isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       }`}
     >
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-8">
-          <Link to="/" className="flex items-center gap-2">
-            <div
-              className={`p-2 rounded-xl bg-gradient-to-br ${gradientFrom} ${gradientTo}`}
+      <div className="flex-1 overflow-y-auto hide-scrollbar min-h-0">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-8">
+            <Link to="/" className="flex items-center gap-2">
+              <div
+                className={`p-2 rounded-xl bg-gradient-to-br ${gradientFrom} ${gradientTo}`}
+              >
+                <Music className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-white text-xl font-bold tracking-wider">
+                Localify
+              </span>
+            </Link>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors md:hidden"
             >
-              <Music className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-white text-xl font-bold tracking-wider">
-              Localify
-            </span>
-          </Link>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors md:hidden"
-          >
-            <X className="w-5 h-5 text-white/60" />
-          </button>
-        </div>
+              <X className="w-5 h-5 text-white/60" />
+            </button>
+          </div>
 
-        <div className="space-y-2 mb-8">
-          <NavItem icon={<Home />} label="Home" to="/" onClick={onClose} />
-          <NavItem
-            icon={<Search />}
-            label="Search"
-            onClick={() => {
-              openSearch();
-              onClose();
-            }}
-            shortcut="⌃ Space"
-          />
-          <NavItem
-            icon={<Disc />}
-            label="Albums"
-            to="/albums"
-            onClick={onClose}
-          />
-          <NavItem
-            icon={<User />}
-            label="Artists"
-            to="/artists"
-            onClick={onClose}
-          />
-        </div>
+          <div className="space-y-2 mb-8">
+            <NavItem icon={<Home />} label="Home" to="/" onClick={onClose} />
+            <NavItem
+              icon={<Search />}
+              label="Search"
+              onClick={() => {
+                openSearch();
+                onClose();
+              }}
+              shortcut="⌃ Space"
+            />
+            <NavItem
+              icon={<Disc />}
+              label="Albums"
+              to="/albums"
+              onClick={onClose}
+            />
+            <NavItem
+              icon={<User />}
+              label="Artists"
+              to="/artists"
+              onClick={onClose}
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Link
-            to="/playlists"
-            className="w-full px-4 py-3 rounded-xl transition-all duration-300 text-white/70 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/5 flex items-center gap-2"
-            onClick={onClose}
-          >
-            <PlusCircle size={20} />
-            <span className="font-medium">Create Playlist</span>
-          </Link>
-          <NavItem
-            icon={<Heart className="text-red-500 fill-red-500" />}
-            label="Liked Songs"
-            to="/liked-music"
-            onClick={onClose}
-          />
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto hide-scrollbar px-2">
-        <div className="space-y-1 p-4">
-          <p className="text-white/40 text-sm px-4 mb-4">PLAYLISTS</p>
-          {playlists.map((playlist) => (
+          <div className="space-y-2">
             <Link
-              key={playlist.id}
-              to={`/playlists/${playlist.id}`}
-              className="px-4 py-2 rounded-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-white/15 hover:to-white/5 flex items-center gap-2 group"
+              to="/playlists"
+              className="w-full px-4 py-3 rounded-xl transition-all duration-300 text-white/70 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/5 flex items-center gap-2"
               onClick={onClose}
             >
-              <ListMusic className="w-4 h-4 text-white/40 group-hover:text-white/60" />
-              <p className="text-white/70 group-hover:text-white text-sm truncate">
-                {playlist.name}
-              </p>
+              <PlusCircle size={20} />
+              <span className="font-medium">Create Playlist</span>
             </Link>
-          ))}
+            <NavItem
+              icon={<Heart className="text-red-500 fill-red-500" />}
+              label="Liked Songs"
+              to="/liked-music"
+              onClick={onClose}
+            />
+          </div>
+        </div>
+
+        <div className="px-2">
+          <div className="space-y-1 p-4">
+            <p className="text-white/40 text-sm px-4 mb-4">PLAYLISTS</p>
+            {playlists.map((playlist) => (
+              <Link
+                key={playlist.id}
+                to={`/playlists/${playlist.id}`}
+                className="px-4 py-2 rounded-xl transition-all duration-300 hover:bg-gradient-to-r hover:from-white/15 hover:to-white/5 flex items-center gap-2 group"
+                onClick={onClose}
+              >
+                <ListMusic className="w-4 h-4 text-white/40 group-hover:text-white/60" />
+                <p className="text-white/70 group-hover:text-white text-sm truncate">
+                  {playlist.name}
+                </p>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 

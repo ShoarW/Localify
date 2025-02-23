@@ -147,8 +147,8 @@ export const MusicPlayer = ({
         if ("mediaSession" in navigator) {
           navigator.mediaSession.metadata = new MediaMetadata({
             title: currentTrack.title,
-            artist: currentTrack.artist,
-            album: currentTrack.album,
+            artist: currentTrack.artistName,
+            album: currentTrack.albumName,
             artwork: currentTrack.albumId
               ? [
                   {
@@ -387,7 +387,7 @@ export const MusicPlayer = ({
   useEffect(() => {
     const currentTrack = playlist[currentTrackIndex];
     if (currentTrack && isPlaying) {
-      document.title = `${currentTrack.title} - ${currentTrack.album} - Localify`;
+      document.title = `${currentTrack.title} - ${currentTrack.albumName}, ${currentTrack.artistName} - Localify`;
       if (currentTrack.albumId) {
         updateFavicon(api.getAlbumCoverUrl(currentTrack.albumId));
       }

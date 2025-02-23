@@ -102,18 +102,13 @@ export const MainContent = ({
             {homeContent.quickPicks.map((track, index) => (
               <TrackItem
                 key={track.id}
-                title={track.title}
-                artist={track.artistName || "Unknown Artist"}
-                duration={track.duration}
-                reaction={track.reaction}
-                trackId={track.id}
+                track={track}
                 onClick={() => onPlayTrack(homeContent.quickPicks, index)}
                 playlists={playlists}
                 onPlaylistsChange={onPlaylistsChange}
                 isActive={currentTrackId === track.id}
                 isPlaying={isPlaying && currentTrackId === track.id}
                 showArt={true}
-                albumId={track.albumId}
               />
             ))}
           </div>
@@ -131,11 +126,7 @@ export const MainContent = ({
             {homeContent.listenAgain.map((track, index) => (
               <div key={track.id} className="relative">
                 <TrackItem
-                  title={track.title}
-                  artist={track.artistName || "Unknown Artist"}
-                  duration={track.duration}
-                  reaction={null}
-                  trackId={track.id}
+                  track={track}
                   onClick={() => onPlayTrack(homeContent.listenAgain, index)}
                   playlists={playlists}
                   onPlaylistsChange={onPlaylistsChange}

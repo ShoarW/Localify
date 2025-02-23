@@ -8,44 +8,34 @@ import {
   ListMusic,
 } from "lucide-react";
 import { useState } from "react";
-import { ReactionType, Playlist, api } from "../../services/api";
+import { ReactionType, Playlist, api, Track } from "../../services/api";
 import { ContextMenu } from "../ui/context-menu";
 import { Modal } from "../ui/modal";
 import { PlaceholderImage } from "./placeholder-image";
 import { useTheme } from "../../contexts/theme-context";
 
 interface TrackItemProps {
-  title: string;
-  artist: string;
-  duration: number;
+  track: Track;
   isPlaying?: boolean;
   isActive?: boolean;
-  reaction: ReactionType;
-  trackId: number;
   number?: number;
   onClick?: () => void;
   onReactionUpdate?: (trackId: number, reaction: ReactionType) => void;
   playlists: Playlist[];
   onPlaylistsChange?: (playlists: Playlist[]) => void;
   showArt?: boolean;
-  albumId?: number;
 }
 
 export const TrackItem = ({
-  title,
-  artist,
-  duration,
+  track,
   isPlaying,
   isActive,
-  reaction,
-  trackId,
   number,
   onClick,
   onReactionUpdate,
   playlists,
   onPlaylistsChange,
   showArt,
-  albumId,
 }: TrackItemProps) => {
   const { gradientFrom, gradientTo } = useTheme();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,7 +47,7 @@ export const TrackItem = ({
 
   const handleAddToPlaylist = async (playlistId: number) => {
     try {
-      await api.addTrackToPlaylist(playlistId, trackId);
+      await api.addTrackToPlaylist(playlistId, track.id);
       // Update the playlist's track count in the local state
       if (onPlaylistsChange) {
         onPlaylistsChange(
@@ -80,7 +70,7 @@ export const TrackItem = ({
         newPlaylistName,
         newPlaylistDescription || undefined
       );
-      await api.addTrackToPlaylist(id, trackId);
+      await api.addTrackToPlaylist(id, track.id);
 
       const newPlaylist = {
         id,
@@ -114,9 +104,12 @@ export const TrackItem = ({
     setReactionLoading(true);
 
     try {
-      const newType = type === reaction ? null : type;
-      const { reaction: newReaction } = await api.setReaction(trackId, newType);
-      onReactionUpdate?.(trackId, newReaction);
+      const newType = type === track.reaction ? null : type;
+      const { reaction: newReaction } = await api.setReaction(
+        track.id,
+        newType
+      );
+      onReactionUpdate?.(track.id, newReaction);
     } catch (error) {
       console.error("Failed to set reaction:", error);
     } finally {
@@ -149,8 +142,8 @@ export const TrackItem = ({
           {showArt ? (
             <PlaceholderImage
               type="album"
-              id={albumId}
-              hasImage={albumId !== undefined}
+              id={track.albumId}
+              hasImage={track.hasImage}
               size="md"
             />
           ) : (
@@ -182,9 +175,9 @@ export const TrackItem = ({
                   : "text-white"
               }`}
             >
-              {title}
+              {track.title}
             </p>
-            <p className="text-sm text-white/60 truncate">{artist}</p>
+            <p className="text-sm text-white/60 truncate">{track.artistName}</p>
           </div>
           <div
             className="flex items-center gap-4"
@@ -196,7 +189,7 @@ export const TrackItem = ({
                 onClick={() => handleReaction("like")}
                 disabled={reactionLoading}
                 className={`p-1.5 rounded-lg transition-all duration-300 ${
-                  reaction === "like"
+                  track.reaction === "like"
                     ? "text-green-500 bg-green-500/10"
                     : "text-white/40 hover:text-white/60 hover:bg-white/5 opacity-0 group-hover:opacity-100"
                 } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -207,7 +200,7 @@ export const TrackItem = ({
                 onClick={() => handleReaction("dislike")}
                 disabled={reactionLoading}
                 className={`p-1.5 rounded-lg transition-all duration-300 ${
-                  reaction === "dislike"
+                  track.reaction === "dislike"
                     ? "text-red-500 bg-red-500/10"
                     : "text-white/40 hover:text-white/60 hover:bg-white/5 opacity-0 group-hover:opacity-100"
                 } ${reactionLoading ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -246,7 +239,7 @@ export const TrackItem = ({
               </button>
             </ContextMenu>
             <span className="text-sm text-white/60 w-12 text-right">
-              {formatTime(duration)}
+              {formatTime(track.duration)}
             </span>
           </div>
         </div>
