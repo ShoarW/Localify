@@ -91,6 +91,11 @@ async function findCoverArtInDirectory(
   }
 }
 
+function normalizePath(filePath: string): string {
+  // Convert to forward slashes and lowercase for consistent comparison
+  return filePath.replace(/\\/g, "/").toLowerCase();
+}
+
 export async function indexDirectory(
   directoryPath: string,
   progressCallback?: (progress: {
@@ -110,7 +115,7 @@ export async function indexDirectory(
   const added: Track[] = [];
   const removed: Track[] = [];
   const unchanged: Track[] = [];
-  const BATCH_SIZE = 50; // Process files in batches of 50
+  const BATCH_SIZE = 50;
 
   // First, scan all files
   progressCallback?.({
@@ -120,13 +125,21 @@ export async function indexDirectory(
     removed: 0,
     unchanged: 0,
   });
+
   const currentFiles = await getAllMusicFiles(directoryPath);
   const existingTracks = await dbGetAllTracks(db);
-  const existingTrackPaths = new Set(existingTracks.map((track) => track.path));
+
+  // Create a map of normalized paths to original paths for existing tracks
+  const existingTrackPaths = new Map<string, string>();
+  existingTracks.forEach((track) => {
+    if (track.path) {
+      existingTrackPaths.set(normalizePath(track.path), track.path);
+    }
+  });
 
   // Process files in batches
   const filesToProcess = currentFiles.filter(
-    (filePath) => !existingTrackPaths.has(filePath)
+    (filePath) => !existingTrackPaths.has(normalizePath(filePath))
   );
   const totalFiles = filesToProcess.length;
 
@@ -157,17 +170,26 @@ export async function indexDirectory(
     }
   }
 
-  // Add unchanged tracks
+  // Add unchanged tracks and mark paths as processed
+  const processedPaths = new Set<string>();
   for (const filePath of currentFiles) {
-    if (existingTrackPaths.has(filePath)) {
-      const existingTrack = existingTracks.find((t) => t.path === filePath)!;
+    const normalizedPath = normalizePath(filePath);
+    if (existingTrackPaths.has(normalizedPath)) {
+      const originalPath = existingTrackPaths.get(normalizedPath)!;
+      const existingTrack = existingTracks.find(
+        (t) => t.path === originalPath
+      )!;
       unchanged.push(existingTrack);
-      existingTrackPaths.delete(filePath);
+      processedPaths.add(normalizedPath);
     }
   }
 
+  // Process removals - only remove tracks whose normalized paths weren't processed
+  const pathsToRemove = Array.from(existingTrackPaths.entries())
+    .filter(([normalizedPath]) => !processedPaths.has(normalizedPath))
+    .map(([_, originalPath]) => originalPath);
+
   // Process removals in batches
-  const pathsToRemove = Array.from(existingTrackPaths);
   for (let i = 0; i < pathsToRemove.length; i += BATCH_SIZE) {
     const batch = pathsToRemove.slice(i, i + BATCH_SIZE);
 
@@ -180,10 +202,10 @@ export async function indexDirectory(
       unchanged: unchanged.length,
     });
 
-    // Process removals sequentially as well
+    // Process removals sequentially
     for (const pathToRemove of batch) {
       const trackToDelete = existingTracks.find((t) => t.path === pathToRemove);
-      if (trackToDelete && trackToDelete.id) {
+      if (trackToDelete?.id) {
         const deleted = await deleteTrack(trackToDelete.id);
         if (deleted) {
           removed.push(trackToDelete);
