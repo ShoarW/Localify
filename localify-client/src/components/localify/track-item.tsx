@@ -109,6 +109,11 @@ export const TrackItem = ({
         track.id,
         newType
       );
+
+      // Update local state immediately
+      track.reaction = newReaction;
+
+      // Notify parent component if they want to sync their state
       onReactionUpdate?.(track.id, newReaction);
     } catch (error) {
       console.error("Failed to set reaction:", error);

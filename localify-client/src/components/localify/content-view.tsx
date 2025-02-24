@@ -23,6 +23,10 @@ interface ContentViewProps {
   albumId?: number;
   artistId?: number;
   hasImage?: boolean;
+  onReactionUpdate?: (
+    trackId: number,
+    reaction: "like" | "dislike" | null
+  ) => void;
 }
 
 export const ContentView = ({
@@ -42,6 +46,7 @@ export const ContentView = ({
   albumId,
   artistId,
   hasImage = false,
+  onReactionUpdate,
 }: ContentViewProps) => {
   const { gradientFrom, gradientTo } = useTheme();
   const finalGradient = gradient || `${gradientFrom} ${gradientTo}`;
@@ -196,6 +201,7 @@ export const ContentView = ({
                 onClick={() => onTrackSelect(index)}
                 playlists={playlists}
                 onPlaylistsChange={onPlaylistsChange}
+                onReactionUpdate={onReactionUpdate}
               />
             ))}
           </div>

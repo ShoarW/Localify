@@ -46,6 +46,23 @@ export const PlaylistPage = ({
     fetchPlaylist();
   }, [id]);
 
+  const handleReactionUpdate = (
+    trackId: number,
+    newReaction: "like" | "dislike" | null
+  ) => {
+    if (!playlist) return;
+
+    setPlaylist((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tracks: prev.tracks.map((track) =>
+          track.id === trackId ? { ...track, reaction: newReaction } : track
+        ),
+      };
+    });
+  };
+
   const handleDelete = async () => {
     if (
       !playlist ||
@@ -119,6 +136,7 @@ export const PlaylistPage = ({
         createdAt={playlist.createdAt}
         onDelete={handleDelete}
         isDeleting={isDeleting}
+        onReactionUpdate={handleReactionUpdate}
       />
 
       {error && (

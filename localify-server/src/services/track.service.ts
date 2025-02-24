@@ -414,6 +414,10 @@ async function addTrack(filePath: string): Promise<void> {
       mimeType: mimeType,
       createdAt: new Date().getTime(),
       updatedAt: null,
+      artistName: null,
+      reaction: null,
+      albumName: null,
+      hasImage: false,
     };
 
     // Check if the track already exists

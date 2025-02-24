@@ -21,6 +21,26 @@ export const MainContent = ({
   const [homeContent, setHomeContent] = useState<HomeContent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const handleReactionUpdate = (
+    trackId: number,
+    newReaction: "like" | "dislike" | null
+  ) => {
+    if (!homeContent) return;
+
+    setHomeContent((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        quickPicks: prev.quickPicks.map((track) =>
+          track.id === trackId ? { ...track, reaction: newReaction } : track
+        ),
+        listenAgain: prev.listenAgain.map((track) =>
+          track.id === trackId ? { ...track, reaction: newReaction } : track
+        ),
+      };
+    });
+  };
+
   useEffect(() => {
     const fetchHomeContent = async () => {
       try {
@@ -109,6 +129,7 @@ export const MainContent = ({
                 isActive={currentTrackId === track.id}
                 isPlaying={isPlaying && currentTrackId === track.id}
                 showArt={true}
+                onReactionUpdate={handleReactionUpdate}
               />
             ))}
           </div>
@@ -132,6 +153,7 @@ export const MainContent = ({
                   onPlaylistsChange={onPlaylistsChange}
                   isActive={currentTrackId === track.id}
                   isPlaying={isPlaying && currentTrackId === track.id}
+                  onReactionUpdate={handleReactionUpdate}
                 />
               </div>
             ))}
