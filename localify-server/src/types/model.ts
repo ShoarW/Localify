@@ -2,16 +2,22 @@ export type ReactionType = "like" | "dislike" | null;
 
 export interface Track {
   id: number;
-  title: string;
-  artistId: number;
-  artistName: string;
-  duration: number;
-  reaction: ReactionType;
-  albumName: string;
-  albumId: number;
+  path: string;
+  filename: string;
+  title: string | null;
+  artistId: number | null;
+  artistName: string | null;
+  artistString: string | null;
+  duration: number | null;
+  reaction: ReactionType | null;
+  albumName: string | null;
+  albumId: number | null;
   hasImage: boolean;
-  year: number;
-  genre: string;
+  year: number | null;
+  genre: string | null;
+  mimeType: string;
+  createdAt: number;
+  updatedAt: number | null;
 }
 
 export interface User {

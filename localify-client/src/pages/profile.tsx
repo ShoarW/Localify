@@ -139,14 +139,14 @@ export const ProfilePage = () => {
                     <p className="text-white font-medium truncate">
                       {track.title}
                     </p>
-                    <p className="text-white/60 truncate">{track.artist}</p>
+                    <p className="text-white/60 truncate">{track.artistName}</p>
                   </div>
                   <span className="text-white/40 shrink-0">
                     {formatDuration(track.duration)}
                   </span>
                 </div>
                 <p className="text-white/40 text-xs mt-2 truncate">
-                  {track.path}
+                  {track.albumName}
                 </p>
               </div>
             ))}
